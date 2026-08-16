@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "codemaster"
+version = "0.2.0"
+description = "Plataforma de saneamiento de huellas AI: texto, codigo, imagenes, documentos y binarios"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+readme = "README.md"
+
+[project.scripts]
+codemaster = "codemaster.cli:entry"
+
+[project.optional-dependencies]
+images = ["pillow>=10.0.0", "piexif>=1.1.3"]
+pixels = ["pillow>=10.0.0", "numpy>=1.24.0", "opencv-python-headless>=4.8.0"]
+c2pa = ["c2pa-python>=0.35.0"]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "pillow>=10.0.0",
+    "piexif>=1.1.3",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/codemaster"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+show_error_codes = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q --cov=codemaster --cov-report=term-missing"
+testpaths = ["tests"]
+filterwarnings = ["error"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+exclude_lines = ["pragma: no cover"]

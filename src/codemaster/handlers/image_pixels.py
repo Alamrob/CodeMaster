@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+import io
+from pathlib import Path
+from typing import Any
+
+from codemaster.handlers import _deps, registry, visible
+from codemaster.handlers.base import Blob, Handler
+from codemaster.report import Grade, Slip
+from codemaster.scrubber import Edits
+
+
+class _PixelHandler:
+    name = "pixels"
+
+    def probe(self, blob: Blob) -> bool:
+        return blob.kind == "image" and _deps.pillow_ok()
+
+    def audit(self, blob: Blob) -> list[Slip]:
+        slips: list[Slip] = []
+        image = _open(blob)
+        if image is not None:
+            width, height = image.size
+            for mark in registry.MARKS:
+                if mark.locate(image, width, height):
+                    slips.append(Slip(1, 1, "mark", mark.name, Grade.SIGNAL))
+        if _deps.opencv_ok():
+            cv_img = _decode_cv(blob)
+            if cv_img is not None:
+                for det in visible.detect_all(cv_img):
+                    slips.append(
+                        Slip(
+                            1,
+                            1,
+                            "mark",
+                            f"{det.label} ({det.confidence:.2f})",
+                            Grade.DANGER,
+                        )
+                    )
+        return slips
+
+    def wash(self, blob: Blob, edits: Edits) -> tuple[bytes, list[str]]:
+        if _deps.opencv_ok():
+            cv_img = _decode_cv(blob)
+            if cv_img is not None:
+                cv_out, found = visible.remove_marks(cv_img)
+                if found:
+                    return _encode_cv(cv_out, blob.path.suffix), found
+        image = _open(blob)
+        if image is None:
+            return blob.data, []
+        width, height = image.size
+        boxes = [
+            mark.box(width, height)
+            for mark in registry.MARKS
+            if mark.locate(image, width, height)
+        ]
+        if not boxes:
+            return blob.data, []
+        for box in boxes:
+            registry.fill(image, box)
+        output = io.BytesIO()
+        image.save(output, format=image.format or "PNG")
+        return output.getvalue(), ["marks"]
+
+
+HANDLER: Handler = _PixelHandler()
+
+
+def _open(blob: Blob) -> Any:
+    image_mod = _deps.load("PIL.Image")
+    if not image_mod:
+        return None
+    try:
+        image = image_mod.open(io.BytesIO(blob.data))
+        image.load()
+        return image
+    except Exception:
+        return None
+
+
+def _decode_cv(blob: Blob) -> Any:
+    cv2, np = _deps.load("cv2"), _deps.load("numpy")
+    if not cv2 or not np:
+        return None
+    try:
+        arr = np.frombuffer(blob.data, np.uint8)
+        return cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+    except Exception:
+        return None
+
+
+def _encode_cv(image: Any, suffix: str) -> bytes:
+    cv2 = _deps.load("cv2")
+    ext = Path(suffix).suffix.lower()
+    if ext in (".jpg", ".jpeg"):
+        return bytes(
+            cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 95])[1].tobytes()
+        )
+    if ext == ".webp":
+        return bytes(cv2.imencode(".webp", image)[1].tobytes())
+    return bytes(cv2.imencode(".png", image)[1].tobytes())

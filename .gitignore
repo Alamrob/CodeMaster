@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.bak
+.idea/
+.vscode/
+
+# referencia vendored de activos (Apache 2.0); se porta lo necesario en assets/
+remove-ai-watermarks-main/
