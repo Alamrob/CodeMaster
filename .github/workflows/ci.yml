@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package with extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,images,pixels]"
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Mypy
+        run: mypy
+
+      - name: Test suite with coverage
+        run: pytest
+
+      - name: Self-evaluation (clean tree)
+        run: codemaster check --strict . --exclude tests --exclude signatures.py --exclude registry.py --exclude visible.py --exclude assets --exclude remove-ai-watermarks-main

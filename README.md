@@ -31,8 +31,9 @@ codemaster scrub --apply --keep-meta .    aplica sin tocar metadatos
 
 `scan` y `check` son de solo lectura. `scrub` nunca modifica sin `--apply` explicito.
 
-En `--json`, cada archivo incluye `score`: agregado en `[0, 1]` ponderando cada
-hallazgo por gravedad (los senales peligrosos dominan), util para filtrar en CI.
+En `--json` y en la salida humana de `identify`, cada archivo incluye `score`:
+agregado en `[0, 1]` ponderando cada hallazgo por gravedad (los senales peligrosos
+dominan), util para filtrar en CI.
 
 ## Proveniencia C2PA
 
@@ -52,6 +53,8 @@ que solo contienen estado (sin generador conocido) no fuerzan `ai: true`.
 | JPEG | SOI FFD8 | segmentos APP1-EXIF, APP1-XMP, APP13-IPTC, COM (sin recomprimir) |
 | PNG | firma 8-byte | chunks tEXt/iTXt/zTXt AI, eXIf, jumbf |
 | GIF | cabecera `GIF87a`/`GIF89a` | extensiones Comment (0xFE) y XMP (0xFF) |
+| TIFF | `II*\x00`/`MM\x00*` | tags software/artist/xmp/ExifIFD en IFD |
+| HEIC/AVIF | ISO BMFF `ftyp` heic/avif | cajas `meta`/XMP/C2PA (zeroing ISO BMFF) |
 | Imagen (pixels) | marcas visibles reales de IA | localize -> fill (inpaint cv2) |
 | Binarios | bytes nulos | solo reporte forense (no reescribibles) |
 

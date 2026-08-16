@@ -247,6 +247,14 @@ def test_identify_command(capsys, tmp_path: Path) -> None:
     assert row["kind"] == "image"
     assert "meta" in row["handlers"]
     assert row["marks"] >= 3
+    assert 0.0 < row["score"] <= 1.0
+
+
+def test_identify_human_scores(capsys, tmp_path: Path) -> None:
+    (tmp_path / "shot.jpg").write_bytes(_jpeg_with_meta())
+    assert main(["identify", str(tmp_path)]) == 0
+    output = capsys.readouterr().out
+    assert "score=" in output
 
 
 def test_scan_json_new_kinds(capsys, tmp_path: Path) -> None:

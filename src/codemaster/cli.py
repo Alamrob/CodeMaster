@@ -63,16 +63,25 @@ def _run_scrub(ns: argparse.Namespace) -> int:
 
 def _run_identify(ns: argparse.Namespace) -> int:
     scope = _scope(ns)
-    rows: list[tuple[Path, str, str, int, str]] = []
+    rows: list[tuple[Path, str, str, int, str, float]] = []
     for root in _paths(ns):
         for path in list_files_all(root, scope):
             blob = portal.blob_of(path, scope)
             if blob is None:
                 continue
-            slips = portal.audit(blob)
+            sheet = portal.scan_one(path, scope)
             names = ", ".join(handler.name for handler in portal.handlers_for(blob))
-            worst = max((slip.rank for slip in slips), default=Grade.HUSH)
-            rows.append((path, blob.kind, names, len(slips), worst.name.lower()))
+            worst = max((mark.rank for mark in sheet.marks), default=Grade.HUSH)
+            rows.append(
+                (
+                    path,
+                    blob.kind,
+                    names,
+                    len(sheet.marks),
+                    worst.name.lower(),
+                    sheet.score(),
+                )
+            )
     if ns.json:
         import json
 
@@ -83,14 +92,15 @@ def _run_identify(ns: argparse.Namespace) -> int:
                 "handlers": names,
                 "marks": count,
                 "worst": worst,
+                "score": score,
             }
-            for path, kind, names, count, worst in rows
+            for path, kind, names, count, worst, score in rows
         ]
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
-    for path, kind, names, count, worst_name in rows:
+    for path, kind, names, count, worst_name, score in rows:
         print(
-            f"{path}: kind={kind} handlers=[{names}] marks={count} worst={worst_name}"
+            f"{path}: kind={kind} handlers=[{names}] marks={count} worst={worst_name} score={score:.2f}"
         )
     return 0
 
