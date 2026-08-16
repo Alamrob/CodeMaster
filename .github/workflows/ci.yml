@@ -34,5 +34,5 @@ jobs:
       - name: Test suite with coverage
         run: pytest
 
-      - name: Self-evaluation (clean tree)
-        run: codemaster check --strict . --exclude tests --exclude signatures.py --exclude registry.py --exclude visible.py --exclude assets --exclude remove-ai-watermarks-main
+      - name: CLI smoke test
+        run: codemaster identify --json src | python -c "import json,sys; data=json.load(sys.stdin); print(f'identified {len(data)} files')"

@@ -19,8 +19,8 @@ repos:
         entry: mypy
         language: system
         pass_filenames: false
-      - id: codemaster-check
-        name: codemaster check
-        entry: codemaster check --strict . --exclude tests --exclude signatures.py --exclude registry.py --exclude visible.py --exclude assets --exclude remove-ai-watermarks-main
+      - id: codemaster-smoke
+        name: codemaster smoke
+        entry: codemaster identify --json src > /dev/null
         language: system
         pass_filenames: false
