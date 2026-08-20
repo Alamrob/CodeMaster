@@ -9,11 +9,58 @@ from tkinter import filedialog, messagebox, ttk
 
 from codemaster import portal
 from codemaster.fsutil import Scope
-from codemaster.report import Grade
+from codemaster.report import Grade, Mark
 from codemaster.scrubber import Edits, WashResult
 
 _CHECKED = "\u2611"
 _UNCHECKED = "\u2610"
+
+_KIND_INFO: dict[str, str] = {
+    "c2pa": "Manifiesto de procedencia C2PA que declara autor/tool de generacion.",
+    "exif": "Metadatos EXIF que pueden listar el modelo o la herramienta de generacion.",
+    "xmp": "Metadatos XMP (Adobe) que pueden nombrar la aplicacion que creo el archivo.",
+    "pdfkey": "Clave de metadatos PDF que puede revelar el productor o generador.",
+    "comment": "Comentario en codigo que atribuye la autoria a una herramienta IA.",
+    "docstring": "Docstring que describe el codigo como generado por una IA.",
+    "glyph": "Glifo Unicode invisible (caracter de control o stealth) inyectado en el texto.",
+    "model": "Nombre de modelo de IA (Claude, GPT, Gemini, Llama...) presente en el contenido.",
+    "authorship": "Atribucion explicita: 'generado/escrito por' una herramienta IA.",
+    "narration": "Frase tipica de narracion asistida ('note that', 'feel free to'...).",
+    "fragment": "Marcador de fragmento/placeholder comun en salidas de IA.",
+    "handler": "Error interno del analizador al procesar el archivo.",
+    "access": "El archivo no pudo leerse.",
+}
+
+_GRADE_COLORS = {
+    Grade.HUSH: "#888888",
+    Grade.SIGNAL: "#b58900",
+    Grade.DANGER: "#cc241d",
+}
+
+_GRADE_LABEL = {
+    Grade.HUSH: "info",
+    Grade.SIGNAL: "senal",
+    Grade.DANGER: "peligro",
+}
+
+
+def _rank_for(marks: list[Mark]) -> Grade:
+    return max((mark.rank for mark in marks), default=Grade.HUSH)
+
+
+def _verdict(marks: list[Mark], score: float) -> str:
+    rank = _rank_for(marks)
+    if rank == Grade.DANGER:
+        return (
+            "Alta probabilidad de procedencia IA: hay senales firmes "
+            "(metadatos C2PA/EXIF o atribuciones explicitas a una herramienta)."
+        )
+    if rank == Grade.SIGNAL:
+        return (
+            "Posibles senales de IA: patrones de texto, nombres de modelo o "
+            "estructura tipica. Conviene revisar antes de publicar."
+        )
+    return "Sin senales de IA detectadas en este archivo."
 
 
 @dataclass(frozen=True)
@@ -21,29 +68,16 @@ class Row:
     path: Path
     kind: str
     score: float
-    marks: int
-    worst: str
-    kinds: str
+    marks: list[Mark]
 
 
 def collect_rows(roots: list[Path], scope: Scope) -> list[Row]:
     rows: list[Row] = []
     for root in roots:
         for sheet in portal.tour([root], scope).sheets:
-            worst = max((mark.rank for mark in sheet.marks), default=Grade.HUSH)
-            kinds = ", ".join(sorted({mark.kind for mark in sheet.marks}))
             blob = portal.blob_of(sheet.path, scope)
             kind = blob.kind if blob is not None else "?"
-            rows.append(
-                Row(
-                    sheet.path,
-                    kind,
-                    sheet.score(),
-                    len(sheet.marks),
-                    worst.name.lower(),
-                    kinds,
-                )
-            )
+            rows.append(Row(sheet.path, kind, sheet.score(), list(sheet.marks)))
     return rows
 
 
@@ -62,7 +96,7 @@ class App:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         root.title("CodeMaster - Saneamiento de huellas AI")
-        root.geometry("920x640")
+        root.geometry("980x760")
 
         self.scope = Scope()
         self.rows: list[Row] = []
@@ -119,8 +153,11 @@ class App:
             side=tk.LEFT, padx=6
         )
 
-        table_frame = ttk.Frame(self.root)
-        table_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+        main_pane = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
+        main_pane.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+
+        table_frame = ttk.Frame(main_pane)
+        main_pane.add(table_frame, weight=3)
 
         columns = ("sel", "path", "kind", "score", "marks", "worst", "kinds")
         self.tree = ttk.Treeview(
@@ -134,18 +171,32 @@ class App:
         self.tree.heading("worst", text="Peor")
         self.tree.heading("kinds", text="Senales")
         self.tree.column("sel", width=32, stretch=False, anchor=tk.CENTER)
-        self.tree.column("path", width=340)
-        self.tree.column("kind", width=70, stretch=False)
+        self.tree.column("path", width=320)
+        self.tree.column("kind", width=60, stretch=False)
         self.tree.column("score", width=60, stretch=False, anchor=tk.CENTER)
         self.tree.column("marks", width=60, stretch=False, anchor=tk.CENTER)
         self.tree.column("worst", width=70, stretch=False, anchor=tk.CENTER)
-        self.tree.column("kinds", width=180)
+        self.tree.column("kinds", width=160)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.tree.bind("<Button-1>", self._on_click)
+        self.tree.bind("<<TreeviewSelect>>", self._on_select)
 
         scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
         scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree.configure(yscrollcommand=scroll.set)
+
+        detail_frame = ttk.LabelFrame(
+            main_pane, text="Detalle de senales", padding=(6, 4)
+        )
+        main_pane.add(detail_frame, weight=2)
+
+        self.detail = tk.Text(detail_frame, width=46, wrap=tk.WORD, state=tk.DISABLED)
+        self.detail.pack(fill=tk.BOTH, expand=True)
+        for grade in Grade:
+            self.detail.tag_configure(
+                _GRADE_LABEL[grade], foreground=_GRADE_COLORS[grade]
+            )
+        self.detail.tag_configure("head", font=("TkDefaultFont", 10, "bold"))
 
         bottom = ttk.Frame(self.root, padding=(8, 4))
         bottom.pack(fill=tk.X)
@@ -164,7 +215,7 @@ class App:
 
         log_frame = ttk.LabelFrame(self.root, text="Registro", padding=(8, 4))
         log_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
-        self.log = tk.Text(log_frame, height=8, state=tk.DISABLED)
+        self.log = tk.Text(log_frame, height=6, state=tk.DISABLED)
         self.log.pack(fill=tk.BOTH, expand=True)
 
     def _set_busy(self, busy: bool) -> None:
@@ -216,6 +267,8 @@ class App:
         self.selected = set(range(len(rows)))
         self.tree.delete(*self.tree.get_children())
         for index, row in enumerate(rows):
+            worst = _rank_for(row.marks).name.lower()
+            kinds = ", ".join(sorted({mark.kind for mark in row.marks}))
             self.tree.insert(
                 "",
                 tk.END,
@@ -225,14 +278,16 @@ class App:
                     str(row.path),
                     row.kind,
                     f"{row.score:.2f}",
-                    row.marks,
-                    row.worst,
-                    row.kinds,
+                    len(row.marks),
+                    worst,
+                    kinds,
                 ),
             )
         self._update_summary()
         self._set_busy(False)
         self._log(f"{len(rows)} archivo(s) analizados.")
+        if rows:
+            self._show_detail(0)
 
     def _on_click(self, event: tk.Event) -> None:
         item = self.tree.identify_row(event.y)
@@ -247,6 +302,42 @@ class App:
         self.tree.set(item, "sel", _CHECKED if index in self.selected else _UNCHECKED)
         self._update_summary()
 
+    def _on_select(self, _event: tk.Event) -> None:
+        item = self.tree.focus()
+        if item:
+            self._show_detail(int(item))
+
+    def _show_detail(self, index: int) -> None:
+        if not 0 <= index < len(self.rows):
+            return
+        row = self.rows[index]
+        self.detail.configure(state=tk.NORMAL)
+        self.detail.delete("1.0", tk.END)
+        self.detail.insert(tk.END, f"{row.path}\n", ("head",))
+        self.detail.insert(tk.END, f"tipo: {row.kind}   score: {row.score:.2f}\n\n")
+        if not row.marks:
+            self.detail.insert(
+                tk.END, "Sin senales detectadas.\n", (_GRADE_LABEL[Grade.HUSH],)
+            )
+        for mark in row.marks:
+            tag = _GRADE_LABEL[mark.rank]
+            self.detail.insert(
+                tk.END,
+                f"[{_GRADE_LABEL[mark.rank].upper()}] {mark.line}:{mark.col}  "
+                f"{mark.kind}: {mark.note}\n",
+                (tag,),
+            )
+        self.detail.insert(
+            tk.END, "\n" + _verdict(row.marks, row.score) + "\n", ("head",)
+        )
+        counts: dict[str, int] = {}
+        for mark in row.marks:
+            counts[mark.kind] = counts.get(mark.kind, 0) + 1
+        for kind, count in sorted(counts.items()):
+            info = _KIND_INFO.get(kind, "Senal identificada por el analizador.")
+            self.detail.insert(tk.END, f"\n{kind} ({count}): {info}\n")
+        self.detail.configure(state=tk.DISABLED)
+
     def _select_all(self) -> None:
         self.selected = set(range(len(self.rows)))
         for index in self.selected:
@@ -260,7 +351,7 @@ class App:
         self._update_summary()
 
     def _update_summary(self) -> None:
-        marks = sum(row.marks for row in self.rows)
+        marks = sum(len(row.marks) for row in self.rows)
         self.summary_var.set(
             f"{len(self.rows)} archivos, {marks} senales, "
             f"{len(self.selected)} seleccionados"
