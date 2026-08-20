@@ -12,6 +12,7 @@ readme = "README.md"
 
 [project.scripts]
 codemaster = "codemaster.cli:entry"
+codemaster-gui = "codemaster.gui:main"
 
 [project.optional-dependencies]
 images = ["pillow>=10.0.0", "piexif>=1.1.3"]
