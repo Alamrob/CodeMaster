@@ -116,6 +116,18 @@ a{color:var(--accent)}
   </div>
 </div>
 
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Seleccionar carpeta</h3>
+    <div class="crumbs" id="crumb"></div>
+    <div class="dirlist" id="dirlist"></div>
+    <div class="foot">
+      <button id="btnCancel">Cancelar</button>
+      <button id="btnSelect" class="primary">Seleccionar esta carpeta</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
 const state={files:[],selected:new Set(),detail:null};
@@ -341,17 +353,5 @@ $('btnCancel').onclick=closeBrowse;
 initScene();
 loadHistory();
 </script>
-
-<div class="overlay" id="overlay">
-  <div class="modal">
-    <h3>Seleccionar carpeta</h3>
-    <div class="crumbs" id="crumb"></div>
-    <div class="dirlist" id="dirlist"></div>
-    <div class="foot">
-      <button id="btnCancel">Cancelar</button>
-      <button id="btnSelect" class="primary">Seleccionar esta carpeta</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
