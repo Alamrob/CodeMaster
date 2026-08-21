@@ -117,6 +117,9 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/api/config":
             self._send_json(vars(load_config()))
             return
+        if route == "/api/list":
+            self._list_dir(query)
+            return
         self._send_json({"error": "not found"}, 404)
 
     def _serve_index(self) -> None:
@@ -129,6 +132,30 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _list_dir(self, query: dict[str, list[str]]) -> None:
+        raw = query.get("path", [""])[0]
+        start = Path(raw) if raw else Path.home()
+        if not start.is_dir():
+            start = start.parent if start.exists() else Path.home()
+        try:
+            dirs = sorted(
+                (
+                    Path(p)
+                    for p in start.iterdir()
+                    if p.is_dir() and not p.name.startswith(".") and not p.is_symlink()
+                ),
+                key=lambda p: p.name.lower(),
+            )
+        except OSError:
+            dirs = []
+        self._send_json(
+            {
+                "path": str(start),
+                "parent": str(start.parent) if start.parent != start else None,
+                "dirs": [{"name": d.name, "path": str(d)} for d in dirs[:500]],
+            }
+        )
 
     def _scan(self, query: dict[str, list[str]]) -> None:
         raw = query.get("path", [""])[0]

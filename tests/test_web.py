@@ -125,3 +125,31 @@ def test_api_report_markdown(tmp_path: Path) -> None:
             assert body.startswith("# Reporte de huellas AI")
     finally:
         _stop(server, thread)
+
+
+def test_api_list_dirs(tmp_path: Path) -> None:
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "plain.txt").write_text("x", encoding="utf-8")
+    server, port, thread = _server()
+    try:
+        with urlopen(
+            _url(port, f"/api/list?path={tmp_path}"), timeout=10
+        ) as resp:
+            payload = json.loads(resp.read().decode())
+        assert payload["path"] == str(tmp_path)
+        assert [d["name"] for d in payload["dirs"]] == ["sub"]
+        assert payload["parent"] is not None
+    finally:
+        _stop(server, thread)
+
+
+def test_api_list_falls_back_on_missing(tmp_path: Path) -> None:
+    server, port, thread = _server()
+    try:
+        with urlopen(
+            _url(port, "/api/list?path=" + str(tmp_path / "nope")), timeout=10
+        ) as resp:
+            payload = json.loads(resp.read().decode())
+        assert payload["path"]
+    finally:
+        _stop(server, thread)

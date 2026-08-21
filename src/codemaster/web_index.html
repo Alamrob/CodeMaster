@@ -47,6 +47,16 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:10px;pad
 .fallcat{position:absolute;font-size:26px;opacity:.5;animation:fall 9s linear infinite}
 @keyframes fall{0%{transform:translateY(-10vh)}100%{transform:translateY(110vh)}}
 a{color:var(--accent)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:560px;max-width:92vw;max-height:70vh;display:flex;flex-direction:column;overflow:hidden}
+.modal h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-size:15px}
+.modal .crumbs{padding:10px 16px;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px;word-break:break-all}
+.dirlist{overflow:auto;flex:1;padding:6px 0}
+.dir{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:14px}
+.dir:hover{background:rgba(124,140,255,.08)}
+.dir .up{color:var(--accent)}
+.modal .foot{padding:10px 16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
 </style>
 </head>
 <body>
@@ -60,6 +70,7 @@ a{color:var(--accent)}
   <div class="panel">
     <div class="row">
       <input type="text" id="path" placeholder="Ruta de archivo o carpeta...">
+      <button id="btnBrowse" class="primary">📂 Carpeta...</button>
       <button id="btnScan" class="primary">🔍 Analizar</button>
     </div>
     <div class="row" style="margin-top:10px">
@@ -294,8 +305,53 @@ $('btnScan').onclick=runScan;
 $('btnClean').onclick=clean;
 $('btnReport').onclick=downloadReport;
 $('btnDownload').onclick=downloadReport;
+
+let browsePath='';
+async function openBrowse(){
+  browsePath=($('path').value.trim())||'';
+  $('overlay').classList.add('show');
+  await listDirs();
+}
+async function listDirs(){
+  const res=await fetch('/api/list?path='+encodeURIComponent(browsePath));
+  const data=await res.json();
+  browsePath=data.path;
+  $('crumb').textContent=data.path;
+  const list=$('dirlist');list.innerHTML='';
+  if(data.parent){
+    const up=document.createElement('div');up.className='dir';
+    up.innerHTML='<span class="up">⬆ subir</span>';
+    up.onclick=async()=>{browsePath=data.parent;await listDirs()};
+    list.appendChild(up);
+  }
+  data.dirs.forEach(d=>{
+    const row=document.createElement('div');row.className='dir';
+    row.innerHTML=`<span>📁</span><span>${esc(d.name)}</span>`;
+    row.onclick=async()=>{browsePath=d.path;await listDirs()};
+    row.ondblclick=()=>{$('path').value=d.path;$('overlay').classList.remove('show')};
+    list.appendChild(row);
+  });
+  if(!data.dirs.length&&!data.parent)list.innerHTML='<div class="dir">Sin subcarpetas.</div>';
+}
+function closeBrowse(){$('overlay').classList.remove('show')}
+$('btnBrowse').onclick=openBrowse;
+$('btnSelect').onclick=()=>{$('path').value=browsePath;closeBrowse()};
+$('btnCancel').onclick=closeBrowse;
+
 initScene();
 loadHistory();
 </script>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Seleccionar carpeta</h3>
+    <div class="crumbs" id="crumb"></div>
+    <div class="dirlist" id="dirlist"></div>
+    <div class="foot">
+      <button id="btnCancel">Cancelar</button>
+      <button id="btnSelect" class="primary">Seleccionar esta carpeta</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
