@@ -84,3 +84,39 @@ def test_scope_exclude_skips_directories(capsys, tmp_path: Path) -> None:
     clean.write_text("def f():\n    return 1\n", encoding="utf-8")
     assert main(["check", str(tmp_path)]) == 1
     assert main(["check", str(tmp_path), "--exclude", "vendor"]) == 0
+
+
+def test_report_markdown_output(capsys, tainted_py, tmp_path: Path) -> None:
+    out = tmp_path / "report.md"
+    code = main(["report", str(tainted_py), "--format", "md", "-o", str(out)])
+    assert code == 0
+    assert out.exists()
+    assert out.read_text(encoding="utf-8").startswith("# Reporte de huellas AI")
+    assert "escrito" in capsys.readouterr().out
+
+
+def test_report_json_stdout(capsys, tainted_py) -> None:
+    code = main(["report", str(tainted_py), "--format", "json"])
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["worst"] == "danger"
+
+
+def test_config_show(capsys, monkeypatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "cfg.json"
+    cfg.write_text('{"workers": 4, "backup": false}', encoding="utf-8")
+    monkeypatch.setenv("CODEMASTER_CONFIG", str(cfg))
+    code = main(["config", "--show"])
+    assert code == 0
+    output = capsys.readouterr().out
+    assert "workers=4" in output
+    assert "backup=False" in output
+
+
+def test_config_update_saves(capsys, monkeypatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "cfg.json"
+    monkeypatch.setenv("CODEMASTER_CONFIG", str(cfg))
+    code = main(["config", "--workers", "6"])
+    assert code == 0
+    assert "guardada" in capsys.readouterr().out
+    assert '"workers": 6' in cfg.read_text(encoding="utf-8")

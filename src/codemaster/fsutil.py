@@ -32,6 +32,10 @@ DEFAULT_SUFFIXES = frozenset(
         ".ps1",
         ".bat",
         ".sql",
+        ".jsonl",
+        ".mdx",
+        ".log",
+        ".epub",
     }
 )
 

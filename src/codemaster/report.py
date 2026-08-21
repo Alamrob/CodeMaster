@@ -114,3 +114,82 @@ def render_json(ledger: Ledger) -> str:
         ],
     }
     return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def render_markdown(ledger: Ledger) -> str:
+    lines = ["# Reporte de huellas AI", ""]
+    lines.append(f"- Verdicto: **{_verdict_name(ledger.worst())}**")
+    totals = ledger.totals()
+    lines.append(
+        "- Totales: "
+        + (", ".join(f"{k}={v}" for k, v in sorted(totals.items())) or "ninguna")
+    )
+    files = [sheet for sheet in ledger.sheets if sheet.marks]
+    lines.append(f"- Archivos con senales: {len(files)} / {len(ledger.sheets)}")
+    lines.append("")
+    for sheet in files:
+        lines.append(f"## {sheet.path}")
+        lines.append(f"- score: {sheet.score():.2f}")
+        for mark in sheet.marks:
+            lines.append(
+                f"- [{mark.rank.name.lower()}] `{mark.kind}` "
+                f"({mark.line}:{mark.col}) {mark.note}"
+            )
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_html(ledger: Ledger) -> str:
+    totals = ledger.totals()
+    badges = " ".join(
+        f'<span class="badge">{k}: {v}</span>' for k, v in sorted(totals.items())
+    )
+    rows: list[str] = []
+    for sheet in ledger.sheets:
+        if not sheet.marks:
+            continue
+        marks = "".join(
+            f'<li class="{mark.rank.name.lower()}"><b>{mark.kind}</b> '
+            f"({mark.line}:{mark.col}) {_esc(mark.note)}</li>"
+            for mark in sheet.marks
+        )
+        rows.append(
+            f'<tr><td class="path">{_esc(str(sheet.path))}</td>'
+            f"<td>{sheet.score():.2f}</td>"
+            f"<td>{len(sheet.marks)}</td>"
+            f'<td><ul class="marks">{marks}</ul></td></tr>'
+        )
+    body_rows = "".join(rows) or '<tr><td colspan="4">Sin senales</td></tr>'
+    return f"""<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<title>Reporte CodeMaster</title>
+<style>
+ body{{font-family:system-ui,sans-serif;margin:2rem;color:#222}}
+ h1{{border-bottom:2px solid #eee;padding-bottom:.5rem}}
+ .badge{{background:#f1f3f5;border-radius:12px;padding:2px 10px;margin-right:6px}}
+ table{{border-collapse:collapse;width:100%;margin-top:1rem}}
+ th,td{{border:1px solid #e5e7eb;padding:8px;text-align:left;vertical-align:top}}
+ th{{background:#f9fafb}}
+ .marks{{margin:0;padding-left:1.1rem}}
+ .danger{{color:#b91c1c}}
+ .signal{{color:#b45309}}
+ .hush{{color:#6b7280}}
+</style></head><body>
+<h1>Reporte de huellas AI</h1>
+<p>Verdicto: <b>{_verdict_name(ledger.worst())}</b></p>
+<p>{badges}</p>
+<table><thead><tr><th>Archivo</th><th>Score</th><th>Marcas</th><th>Detalle</th></tr></thead>
+<tbody>{body_rows}</tbody></table>
+</body></html>"""
+
+
+def _esc(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _verdict_name(grade: Grade) -> str:
+    if grade >= Grade.DANGER:
+        return "DANGER"
+    if grade >= Grade.SIGNAL:
+        return "SIGNAL"
+    return "clean"

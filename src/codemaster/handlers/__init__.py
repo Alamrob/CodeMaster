@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from codemaster.handlers import (
+    epub,
     forensics,
     html,
     image_meta,
@@ -23,6 +24,8 @@ def chain(blob: Blob) -> list[Handler]:
         return [pdf.HANDLER]
     if kind in ("docx", "xlsx", "pptx"):
         return [office.HANDLER]
+    if kind == "epub":
+        return [epub.HANDLER]
     if kind == "html":
         return [html.HANDLER]
     if kind == "binary":

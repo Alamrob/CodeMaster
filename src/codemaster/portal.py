@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import io
+import os
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from codemaster.fsutil import Scope, walk_all
@@ -9,6 +13,9 @@ from codemaster.handlers.base import Blob, Handler
 from codemaster.kind import classify
 from codemaster.report import FileSheet, Grade, Ledger, Mark, Slip
 from codemaster.scrubber import Edits, WashResult
+
+ProgressFn = Callable[[int, int], None]
+CancelFn = Callable[[], bool]
 
 
 def blob_of(path: Path, scope: Scope) -> Blob | None:
@@ -52,6 +59,51 @@ def tour(roots: list[Path], scope: Scope) -> Ledger:
     return Ledger(sheets)
 
 
+def tour_parallel(
+    roots: list[Path],
+    scope: Scope,
+    workers: int = 0,
+    progress: ProgressFn | None = None,
+    cancel: CancelFn | None = None,
+) -> Ledger:
+    """Scan many files in parallel with optional progress/cancellation.
+
+    ``progress(done, total)`` is invoked from the calling thread as each file
+    completes. ``cancel()`` returning True stops scheduling new work early.
+    """
+    paths = [path for root in roots for path in _walk_all_files(root, scope)]
+    total = len(paths)
+    if total == 0:
+        if progress is not None:
+            progress(0, 0)
+        return Ledger([])
+    if workers <= 0:
+        workers = max(1, min(32, (os.cpu_count() or 1) * 2))
+    sheets: list[FileSheet | None] = [None] * total
+    done = 0
+    if cancel is not None and cancel():
+        return Ledger([])
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {
+            pool.submit(scan_one, path, scope): index
+            for index, path in enumerate(paths)
+        }
+        for future in as_completed(futures):
+            if cancel is not None and cancel():
+                for other in futures:
+                    other.cancel()
+                break
+            index = futures[future]
+            try:
+                sheets[index] = future.result()
+            except Exception:  # pragma: no cover - defensive
+                sheets[index] = FileSheet(paths[index], [])
+            done += 1
+            if progress is not None:
+                progress(done, total)
+    return Ledger([sheet for sheet in sheets if sheet is not None])
+
+
 def wash_path(
     path: Path,
     edits: Edits,
@@ -87,8 +139,26 @@ def wash_path(
         if not saved.exists():
             saved.write_bytes(original)
     if altered:
-        path.write_bytes(current.data)
+        _atomic_write(path, current.data, original)
     return WashResult(path, altered, sorted(set(labels)), saved, altered)
+
+
+def _atomic_write(path: Path, data: bytes, original: bytes) -> None:
+    """Write ``data`` to ``path`` atomically, rolling back on failure.
+
+    Writes to a temporary sibling file then renames over the target so the
+    destination is never left half-written. If the rename fails, the original
+    bytes are restored in place.
+    """
+    tmp = path.with_name(path.name + ".cmtmp")
+    try:
+        tmp.write_bytes(data)
+        os.replace(tmp, path)
+    except OSError:
+        with contextlib.suppress(OSError):
+            tmp.unlink(missing_ok=True)
+        path.write_bytes(original)
+        raise
 
 
 def _walk_all_files(root: Path, scope: Scope) -> list[Path]:

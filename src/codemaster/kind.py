@@ -98,6 +98,8 @@ def classify(
             return "xlsx"
         if b"ppt/presentation.xml" in head and b"[Content_Types].xml" in head:
             return "pptx"
+        if path.suffix.lower() == ".epub" and _is_epub(data):
+            return "epub"
         return "zip"
     head = data[:512].lstrip().lower()
     if head.startswith(b"<!doctype html") or head.startswith(b"<html"):
@@ -120,3 +122,15 @@ def _printable_ratio(data: bytes) -> float:
     sample = data[:8192]
     printable = sum(1 for byte in sample if byte in (9, 10, 13) or 32 <= byte <= 126)
     return printable / len(sample)
+
+
+def _is_epub(data: bytes) -> bool:
+    try:
+        import io
+        import zipfile
+
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            names = {name.lower() for name in archive.namelist()}
+            return "mimetype" in names and bool(any(n.endswith(".opf") for n in names))
+    except (OSError, zipfile.BadZipFile, ValueError):
+        return False

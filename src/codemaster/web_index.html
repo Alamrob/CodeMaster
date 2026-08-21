@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeMaster — Saneamiento de huellas AI</title>
+<style>
+:root{
+  --bg:#0f1117; --panel:#171a24; --panel2:#1e2230; --line:#2a3040;
+  --text:#e6e9f0; --muted:#8a93a8; --accent:#7c8cff; --accent2:#5eead4;
+  --danger:#f87171; --signal:#fbbf24; --ok:#34d399;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
+#scene{position:fixed;inset:0;z-index:0;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:24px}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 18px}
+.panel{background:rgba(23,26,36,.92);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;backdrop-filter:blur(6px)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input[type=text]{flex:1;min-width:220px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:9px 12px;outline:none}
+input[type=text]:focus{border-color:var(--accent)}
+button{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 14px;cursor:pointer;font-size:14px;transition:.15s}
+button:hover{border-color:var(--accent);color:#fff}
+button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0b0e14;font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+.tag{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted);margin:2px}
+.chip{font-size:12px;border-radius:999px;padding:2px 9px}
+.chip.danger{background:rgba(248,113,113,.15);color:var(--danger)}
+.chip.signal{background:rgba(251,191,36,.15);color:var(--signal)}
+.chip.hush{background:rgba(138,147,168,.15);color:var(--muted)}
+#bar{height:8px;background:var(--panel2);border-radius:999px;overflow:hidden;margin:10px 0 4px;display:none}
+#fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
+#status{color:var(--muted);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel)}
+tbody tr:hover{background:rgba(124,140,255,.05)}
+.cb{width:28px;text-align:center;cursor:pointer;font-size:16px}
+.cb.on{color:var(--accent2)}
+.path{word-break:break-all;max-width:340px}
+.score{font-variant-numeric:tabular-nums}
+pre{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;max-height:280px;font-size:12px;white-space:pre-wrap;margin:0}
+.small{font-size:12px;color:var(--muted)}
+.hide{display:none}
+#cats{position:fixed;inset:0;z-index:0;pointer-events:none}
+.fallcat{position:absolute;font-size:26px;opacity:.5;animation:fall 9s linear infinite}
+@keyframes fall{0%{transform:translateY(-10vh)}100%{transform:translateY(110vh)}}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="cats" class="hide"></div>
+
+<div class="wrap">
+  <h1>🐈 CodeMaster</h1>
+  <p class="sub">Saneamiento de huellas AI — escanear, entender, limpiar</p>
+
+  <div class="panel">
+    <div class="row">
+      <input type="text" id="path" placeholder="Ruta de archivo o carpeta...">
+      <button id="btnScan" class="primary">🔍 Analizar</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="small"><input type="checkbox" id="optBackup" checked> respaldo .bak</label>
+      <label class="small"><input type="checkbox" id="optComments" checked> comentarios</label>
+      <label class="small"><input type="checkbox" id="optDocs" checked> docstrings</label>
+      <label class="small"><input type="checkbox" id="optMeta" checked> metadatos</label>
+      <label class="small"><input type="checkbox" id="optGlyphs"> glifos</label>
+      <button id="btnClean" class="primary" disabled style="margin-left:auto">🧹 Limpiar seleccion</button>
+      <button id="btnReport">📄 Reporte</button>
+    </div>
+    <div id="bar"><div id="fill"></div></div>
+    <div id="status">Sin analizar</div>
+  </div>
+
+  <div class="panel">
+    <table>
+      <thead><tr><th></th><th>Archivo</th><th>Tipo</th><th>Score</th><th>Marcas</th><th>Peor</th><th>Señales</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty" class="small" style="padding:10px 0">Ejecuta Analizar para ver resultados.</div>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin:0 0 8px;font-size:15px">Detalle e interpretación</h3>
+    <pre id="detail">Selecciona un archivo para ver sus huellas y qué significan.</pre>
+  </div>
+
+  <div class="row" style="gap:10px">
+    <div class="panel" style="flex:1;min-width:280px">
+      <h3 style="margin:0 0 8px;font-size:15px">Historial de limpiezas</h3>
+      <div id="hist" class="small">Sin registros.</div>
+    </div>
+    <div class="panel" style="flex:1;min-width:280px">
+      <h3 style="margin:0 0 8px;font-size:15px">Exportar reporte</h3>
+      <div class="row">
+        <select id="repFmt" style="background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px">
+          <option value="md">Markdown</option><option value="html">HTML</option><option value="json">JSON</option>
+        </select>
+        <button id="btnDownload">⬇ Descargar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+const state={files:[],selected:new Set(),detail:null};
+const $=id=>document.getElementById(id);
+
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function chip(rank){return `<span class="chip ${rank}">${rank}</span>`}
+
+function buildCat(){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.SphereGeometry(1,.6,.6),new THREE.MeshStandardMaterial({color:0xf4a261}));
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.72,.6,.6),new THREE.MeshStandardMaterial({color:0xf4a261}));
+  head.position.set(0,1.15,.18);
+  const earM=new THREE.MeshStandardMaterial({color:0xe76f51});
+  for(const sx of[-1,1]){
+    const ear=new THREE.Mesh(new THREE.ConeGeometry(.22,.4,4),earM);
+    ear.position.set(sx*.38,1.78,.05); ear.rotation.z=-sx*.25;
+    g.add(ear);
+  }
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.09,.14,.9,8),earM);
+  tail.position.set(0,.4,-1.05); tail.rotation.x=-1.4;
+  const eyeM=new THREE.MeshStandardMaterial({color:0x264653});
+  for(const sx of[-1,1]){
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(.11,.4,.4),eyeM);
+    eye.position.set(sx*.24,1.28,.68); g.add(eye);
+  }
+  g.add(body); g.add(head); g.add(tail);
+  return g;
+}
+
+function initScene(){
+  const container=$('scene');
+  if(!window.THREE){showFallbackCats();return}
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,100);
+  camera.position.set(0,2.2,7);
+  const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
+  renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(devicePixelRatio);
+  container.appendChild(renderer.domElement);
+  scene.add(new THREE.AmbientLight(0xffffff,.6));
+  const sun=new THREE.DirectionalLight(0xffffff,.8); sun.position.set(4,6,3); scene.add(sun);
+  const cats=[];
+  for(let i=0;i<3;i++){
+    const cat=buildCat();
+    cat.scale.setScalar(.45+.12*i);
+    cat.position.set(-3+i*3,0,0);
+    scene.add(cat); cats.push({g:cat,p:Math.random()*6});
+  }
+  const stars=new THREE.Group();
+  for(let i=0;i<120;i++){
+    const s=new THREE.Mesh(new THREE.SphereGeometry(.03,.2,.2),new THREE.MeshBasicMaterial({color:0xffffff}));
+    s.position.set((Math.random()-.5)*24,(Math.random()-.5)*12,-8-Math.random()*6);
+    stars.add(s);
+  }
+  scene.add(stars);
+  (function loop(t){
+    requestAnimationFrame(loop);
+    cats.forEach((c,i)=>{
+      c.g.position.y=Math.sin(t*.0007+i*2)*.35;
+      c.g.rotation.y=Math.sin(t*.0004+i)*.4;
+      c.g.rotation.x=Math.sin(t*.0006+i)*.06;
+    });
+    stars.rotation.y+=.0002;
+    renderer.render(scene,camera);
+  })(0);
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+}
+
+function showFallbackCats(){
+  $('cats').classList.remove('hide');
+  const cats=$('cats');
+  for(let i=0;i<7;i++){
+    const d=document.createElement('div'); d.className='fallcat'; d.textContent=['🐱','🐈','😸','😺','🐈‍⬛'][i%5];
+    d.style.left=(i*14+5)+'%'; d.style.animationDelay=(i*1.3)+'s'; cats.appendChild(d);
+  }
+}
+
+async function runScan(){
+  const p=$('path').value.trim();
+  if(!p){setStatus('Escribe una ruta primero.');return}
+  setBusy(true);
+  $('tbody').innerHTML=''; $('empty').classList.add('hide');
+  $('bar').style.display='block'; $('fill').style.width='0';
+  const res=await fetch('/api/scan?path='+encodeURIComponent(p));
+  if(!res.ok){const e=await res.json();setStatus('Error: '+(e.error||res.status));setBusy(false);return}
+  const reader=res.body.getReader();
+  const dec=new TextDecoder();let buf='';
+  while(true){
+    const {done,value}=await reader.read();
+    if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    let idx;
+    while((idx=buf.indexOf('\n\n'))>=0){
+      const line=buf.slice(0,idx).split('\n').find(l=>l.startsWith('data: '));
+      buf=buf.slice(idx+2);
+      if(!line)continue;
+      const ev=JSON.parse(line.slice(6));
+      if(ev.type==='progress'){setStatus(`Escaneando ${ev.done}/${ev.total}...`);$('fill').style.width=(100*ev.done/ev.total)+'%'}
+      if(ev.type==='done'){renderFiles(ev);setStatus(`Listo: ${ev.files.length} archivos con señales (peor: ${ev.worst})`)}
+    }
+  }
+  setBusy(false);
+}
+
+function renderFiles(ev){
+  state.files=ev.files; state.selected=new Set(ev.files.map((_,i)=>i));
+  const tb=$('tbody'); tb.innerHTML='';
+  ev.files.forEach((f,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="cb on" data-i="${i}">☑</td>
+      <td class="path">${esc(f.path)}</td><td>${esc(f.kind||'')}</td>
+      <td class="score">${f.score.toFixed(2)}</td><td>${f.marks.length}</td>
+      <td>${chip(f.worst)}</td>
+      <td>${esc(f.marks.map(m=>m.kind).filter((k,x,a)=>a.indexOf(k)===x).join(', '))}</td>`;
+    tr.querySelector('.cb').onclick=()=>toggle(i);
+    tr.onclick=()=>showDetail(f);
+    tb.appendChild(tr);
+  });
+  $('btnClean').disabled=false;
+}
+
+function toggle(i){
+  if(state.selected.has(i))state.selected.delete(i);else state.selected.add(i);
+  const cb=$('tbody').children[i].querySelector('.cb');
+  cb.textContent=state.selected.has(i)?'☑':'☐'; cb.classList.toggle('on',state.selected.has(i));
+}
+
+const KIND_INFO={
+  c2pa:'Manifiesto de procedencia C2PA que declara autor/tool de generación.',
+  exif:'Metadatos EXIF que pueden listar el modelo o herramienta de generación.',
+  xmp:'Metadatos XMP (Adobe) que pueden nombrar la aplicación creadora.',
+  pdfkey:'Clave de metadatos PDF que revela el productor/generador.',
+  comment:'Comentario que atribuye autoría a una herramienta IA.',
+  docstring:'Docstring que describe el código como generado por IA.',
+  model:'Nombre de modelo de IA (Claude, GPT, Gemini, Llama...).',
+  authorship:'Atribución explícita: "generado/escrito por" una IA.',
+  narration:'Frase típica de narración asistida (note that, feel free to...).',
+  fragment:'Marcador de fragmento/placeholder común en salidas de IA.',
+  stealth:'Glifo Unicode invisible (carácter de control) inyectado.',
+  glyph:'Glifo Unicode invisible inyectado en el texto.'
+};
+function showDetail(f){
+  const rank=f.worst;
+  const verdict=rank==='danger'?'Alta probabilidad de procedencia IA (señales firmes).'
+    :rank==='signal'?'Posibles señales de IA: conviene revisar.'
+    :'Sin señales de IA detectadas.';
+  let out=`📄 ${f.path}\nscore: ${f.score.toFixed(2)}  peor: ${rank}  → ${verdict}\n\n`;
+  f.marks.forEach(m=>{
+    out+=`[${m.rank.toUpperCase()}] ${m.line}:${m.col}  ${m.kind}: ${m.note}\n`;
+    const info=KIND_INFO[m.kind]||'Señal identificada por el analizador.';
+    out+=`    ↳ ${info}\n`;
+  });
+  $('detail').textContent=out;
+}
+
+async function clean(){
+  const idx=[...state.selected].sort((a,b)=>a-b);
+  if(!idx.length){setStatus('Selecciona al menos un archivo.');return}
+  const paths=idx.map(i=>state.files[i].path);
+  if(!confirm(`Limpiar ${paths.length} archivo(s)? Los originales se respaldan a .bak.`))return;
+  const payload={paths,backup:$('optBackup').checked,comments:$('optComments').checked,
+    docstrings:$('optDocs').checked,meta:$('optMeta').checked,glyphs:$('optGlyphs').checked};
+  const res=await fetch('/api/clean',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const data=await res.json();
+  setStatus(`Limpieza completada: ${data.washed} archivo(s) modificados.`);
+  loadHistory();
+  runScan();
+}
+
+async function loadHistory(){
+  const res=await fetch('/api/history');const {entries}=await res.json();
+  $('hist').innerHTML=entries.length?entries.map(e=>`${e.ts} · ${e.path} [${e.labels.join(', ')}]`).join('<br>')||'': 'Sin registros.';
+}
+
+async function downloadReport(){
+  const p=$('path').value.trim()||'.';const fmt=$('repFmt').value;
+  const res=await fetch(`/api/report?path=${encodeURIComponent(p)}&format=${fmt}`);
+  const blob=await res.blob();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`codemaster-report.${fmt}`;a.click();
+}
+
+function setBusy(b){$('btnScan').disabled=b;$('btnClean').disabled=b||!state.files.length}
+function setStatus(s){$('status').textContent=s}
+
+$('btnScan').onclick=runScan;
+$('btnClean').onclick=clean;
+$('btnReport').onclick=downloadReport;
+$('btnDownload').onclick=downloadReport;
+initScene();
+loadHistory();
+</script>
+</body>
+</html>

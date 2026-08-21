@@ -13,6 +13,7 @@ readme = "README.md"
 [project.scripts]
 codemaster = "codemaster.cli:entry"
 codemaster-gui = "codemaster.gui:main"
+codemaster-web = "codemaster.web:main"
 
 [project.optional-dependencies]
 images = ["pillow>=10.0.0", "piexif>=1.1.3"]
@@ -29,6 +30,9 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/codemaster"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/codemaster/web_index.html" = "codemaster/web_index.html"
 
 [tool.ruff]
 line-length = 88

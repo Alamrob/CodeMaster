@@ -8,8 +8,16 @@ from pathlib import Path
 from typing import Any, cast
 
 from codemaster import portal
+from codemaster.config import load as load_config
+from codemaster.config import save as save_config
 from codemaster.fsutil import Scope, list_files_all
-from codemaster.report import Grade, render_human, render_json
+from codemaster.report import (
+    Grade,
+    render_html,
+    render_human,
+    render_json,
+    render_markdown,
+)
 from codemaster.scrubber import Edits
 
 
@@ -29,6 +37,50 @@ def _paths(ns: argparse.Namespace) -> list[Path]:
 def _run_scan(ns: argparse.Namespace) -> int:
     ledger = portal.tour(_paths(ns), _scope(ns))
     print(render_json(ledger) if ns.json else render_human(ledger))
+    return 0
+
+
+def _run_report(ns: argparse.Namespace) -> int:
+    ledger = portal.tour(_paths(ns), _scope(ns))
+    if ns.format == "json":
+        body = render_json(ledger)
+    elif ns.format == "md":
+        body = render_markdown(ledger)
+    elif ns.format == "html":
+        body = render_html(ledger)
+    else:
+        body = render_human(ledger)
+    if ns.output:
+        ns.output.write_text(body, encoding="utf-8")
+        print(f"reporte escrito en {ns.output}")
+    else:
+        print(body)
+    return 0
+
+
+def _run_config(ns: argparse.Namespace) -> int:
+    if ns.show:
+        config = load_config()
+        for key, value in sorted(vars(config).items()):
+            print(f"{key}={value}")
+        return 0
+    current = load_config()
+    updates: dict[str, object] = {}
+    if ns.workers is not None:
+        updates["workers"] = ns.workers
+    if ns.backup is not None:
+        updates["backup"] = ns.backup
+    if ns.glyphs is not None:
+        updates["glyphs"] = ns.glyphs
+    if ns.no_meta:
+        updates["meta"] = False
+    if not updates:
+        print("sin cambios")
+        return 0
+    for key, value in updates.items():
+        setattr(current, key, value)
+    target = save_config(current)
+    print(f"config guardada en {target}")
     return 0
 
 
@@ -115,6 +167,28 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--suffix", action="append")
     scan.add_argument("--exclude", action="append")
     scan.set_defaults(handler=_run_scan)
+
+    report = sub.add_parser("report", help="export analysis report")
+    report.add_argument("paths", nargs="*", default=["."])
+    report.add_argument(
+        "--format", choices=["human", "md", "html", "json"], default="human"
+    )
+    report.add_argument("-o", "--output", type=Path)
+    report.add_argument("--suffix", action="append")
+    report.add_argument("--exclude", action="append")
+    report.set_defaults(handler=_run_report)
+
+    config_cmd = sub.add_parser("config", help="read or update persistent config")
+    config_cmd.add_argument("--show", action="store_true", help="print current config")
+    config_cmd.add_argument("--workers", type=int, help="parallel scan workers")
+    config_cmd.add_argument("--backup", type=bool, help="default backup .bak")
+    config_cmd.add_argument(
+        "--glyphs", type=bool, help="default clean invisible glyphs"
+    )
+    config_cmd.add_argument(
+        "--no-meta", action="store_true", help="skip metadata by default"
+    )
+    config_cmd.set_defaults(handler=_run_config)
 
     check = sub.add_parser("check", help="CI gate")
     check.add_argument("paths", nargs="*", default=["."])

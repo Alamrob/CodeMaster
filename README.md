@@ -23,6 +23,10 @@ codemaster identify [RUTA...]             clasifica el contenido y lista senales
 codemaster identify --json .              clasificacion estructurada
 codemaster check [RUTA...]                puerta CI: salida 1 ante hallazgos firmes
 codemaster check --strict .               falla tambien con avisos
+codemaster report [RUTA...] --format md   exporta reporte (md|html|json|human)
+codemaster report . --format html -o rep  escribe reporte en archivo
+codemaster config --show                  muestra config persistente
+codemaster config --workers 8 --glyphs    actualiza config
 codemaster scrub [RUTA...]                ensayo: muestra el plan sin escribir
 codemaster scrub --apply --backup .       aplica, reservando copia .bak
 codemaster scrub --apply --fix-unicode .  incluye limpieza de glifos invisibles
@@ -34,6 +38,28 @@ codemaster scrub --apply --keep-meta .    aplica sin tocar metadatos
 En `--json` y en la salida humana de `identify`, cada archivo incluye `score`:
 agregado en `[0, 1]` ponderando cada hallazgo por gravedad (los senales peligrosos
 dominan), util para filtrar en CI.
+
+## Plataforma
+
+Ademas de la CLI, el proyecto ofrece dos interfaces y servicios integrados:
+
+| Interfaz | Comando | Descripcion |
+| --- | --- | --- |
+| Escritorio | `codemaster-gui` | ventana tkinter: elegir ruta, analizar, seleccionar que limpiar (todo por defecto), confirmar y aplicar con respaldo |
+| Web | `codemaster-web` | dashboard en `http://127.0.0.1:8765` con gatos animados (three.js), progreso en vivo, limpieza, reportes e historial |
+
+El servidor web expone una API REST local (sin dependencias externas):
+
+- `GET /api/scan?path=...&stream=0` — analisis paralelo (SSE si se omite `stream`)
+- `GET /api/report?path=...&format=md|html|json`
+- `GET /api/history` — historial de limpiezas aplicadas
+- `GET /api/config` / `POST /api/config` — configuracion persistente
+- `POST /api/clean` — limpiar una lista de rutas con respaldo
+
+El escaneo usa `ThreadPoolExecutor` (trabajadores configurables via `config --workers`)
+con escrituras atomicas (tmp + rename) y rollback ante error; cada limpieza aplicada
+se registra en `~/.codemaster/history.jsonl` y la config en `~/.codemaster.json`
+(override con las variables de entorno `CODEMASTER_HOME` y `CODEMASTER_CONFIG`).
 
 ## Proveniencia C2PA
 
@@ -48,6 +74,7 @@ que solo contienen estado (sin generador conocido) no fuerzan `ai: true`.
 | --- | --- | --- |
 | Texto/codigo | suffijo o ratio imprimible | comentarios, docstrings, firmas, glifos |
 | HTML | doctype/markup | comentarios, meta generator/author, glifos |
+| EPUB | PK zip con `mimetype` + `.opf` | glifos invisibles en XHTML (audit de narracion/firmas) |
 | DOCX/XLSX/PPTX | PK zip con word/document.xml, xl/workbook.xml, ppt/presentation.xml | autor en core.xml, glifos en document.xml |
 | PDF | cabecera `%PDF-` | valores /Author /Creator /Producer /Title |
 | JPEG | SOI FFD8 | segmentos APP1-EXIF, APP1-XMP, APP13-IPTC, COM (sin recomprimir) |
