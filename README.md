@@ -68,6 +68,26 @@ estado de validacion de cada manifiesto en el slip `c2pa` como `state: valid` /
 `state: invalid` / `state: unknown`, ademas del generador detectado. Los manifiestos
 que solo contienen estado (sin generador conocido) no fuerzan `ai: true`.
 
+## Catalogo de huellas
+
+El catalogo vive en `src/codemaster/signatures.toml` y se edita sin tocar codigo:
+
+- `[[models]]`: modelos de IA con su grupo (`llm`, `image`, `video`, `audio`, `code`)
+  y patrones de coincidencia (case-insensitive).
+- `[phrases]`: frases tipicas por categoria (`authorship`, `narration`, `fragment`).
+- `[agents]`: mapeo de cadenas C2PA (`claim_generator` / `softwareAgent`) a un
+  modelo canonico.
+- `[vendors]`: tokens que implican una organizacion (OpenAI, Anthropic, Google...).
+
+Incluye 80+ modelos: chat/LLM (chatgpt, claude, gemini, deepseek, qwen, grok...),
+imagen (dall-e, midjourney, stable-diffusion, flux, firefly, ideogram, seedream...),
+video (sora, veo, runway, pika, luma, kling...), audio (elevenlabs, suno, udio,
+whisper...) y codigo (copilot, codex, cursor, v0, bolt.new...).
+
+Lista el catalogo con `codemaster catalog [--group llm|image|video|audio|code]`.
+Al resolver proveniencia C2PA, el manifiesto se mapea al modelo y vendor conocidos
+via `[agents]`/`[vendors]`.
+
 ## Tipos de contenido
 
 | Tipo | Deteccion | Saneado |

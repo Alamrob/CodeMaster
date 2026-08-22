@@ -120,3 +120,21 @@ def test_config_update_saves(capsys, monkeypatch, tmp_path: Path) -> None:
     assert code == 0
     assert "guardada" in capsys.readouterr().out
     assert '"workers": 6' in cfg.read_text(encoding="utf-8")
+
+
+def test_catalog_lists_models(capsys) -> None:
+    code = main(["catalog"])
+    assert code == 0
+    output = capsys.readouterr().out
+    assert "Modelos registrados" in output
+    assert "[video]" in output
+    assert "sora" in output
+
+
+def test_catalog_group_filter(capsys) -> None:
+    code = main(["catalog", "--group", "audio"])
+    assert code == 0
+    output = capsys.readouterr().out
+    assert "[audio]" in output
+    assert "elevenlabs" in output
+    assert "[video]" not in output

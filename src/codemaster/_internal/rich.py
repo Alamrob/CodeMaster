@@ -11,22 +11,9 @@ import io
 import json
 from typing import Any
 
+from codemaster import catalog
 from codemaster.handlers import _deps
 
-_AI_VENDORS = (
-    (("chatgpt", "openai", "gpt-4o", "gpt-5", "sora", "dall-e"), "OpenAI"),
-    (("gemini", "imagen", "deepmind", "synthid", "google"), "Google"),
-    (("firefly", "adobe"), "Adobe"),
-    (("flux", "black forest", "bfl"), "Black Forest Labs"),
-    (("microsoft designer", "bing", "invsmark", "wavmark"), "Microsoft"),
-    (("stable diffusion", "dreamstudio", "stability"), "Stability AI"),
-    (("doubao", "jimeng", "volcengine", "bytedance"), "ByteDance"),
-    (("grok", "xai"), "xAI"),
-    (("meta imagine", "pixelseal"), "Meta"),
-    (("kling", "kuaishou"), "Kuaishou"),
-    (("qwen", "tongyi", "alibaba"), "Alibaba (Qwen)"),
-    (("hunyuan", "tencent", "yuanbao"), "Tencent"),
-)
 _SOFT_BINDINGS = (
     ("com.adobe.trustmark", "Adobe TrustMark"),
     ("com.adobe.icn", "Adobe (content fingerprint)"),
@@ -217,10 +204,14 @@ def _provenance_scan(payload: bytes, info: dict[str, Any]) -> None:
             info["ai"] = True
     if b"watermark" in lowered:
         info["watermarked"] = True
-    for tokens, org in _AI_VENDORS:
-        if any(token.encode() in lowered for token in tokens):
+    text = lowered.decode("utf-8", errors="replace")
+    for token, org in catalog.REGISTRY.vendors.items():
+        if token in text:
             info["vendor"] = org
             break
+    model = catalog.REGISTRY.resolve_agent(text)
+    if model is not None:
+        info["model"] = model
     if b"synthid" in lowered and (info.get("ai") or info.get("enhanced")):
         info["synthid"] = info.get("vendor", "Google")
     soft = [label for token, label in _SOFT_BINDINGS if token.encode() in lowered]

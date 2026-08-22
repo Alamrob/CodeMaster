@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from codemaster import portal
+from codemaster.catalog import REGISTRY
 from codemaster.config import load as load_config
 from codemaster.config import save as save_config
 from codemaster.fsutil import Scope, list_files_all
@@ -81,6 +82,30 @@ def _run_config(ns: argparse.Namespace) -> int:
         setattr(current, key, value)
     target = save_config(current)
     print(f"config guardada en {target}")
+    return 0
+
+
+def _run_catalog(ns: argparse.Namespace) -> int:
+    group = ns.group
+    by_group: dict[str, list[str]] = {}
+    for model in REGISTRY.models:
+        by_group.setdefault(model.group, []).append(model.name)
+    print("== Grupos de huellas ==")
+    for gname, desc in sorted(REGISTRY.groups.items()):
+        print(f"  {gname:<8} {desc}")
+    print()
+    print("== Modelos registrados ==")
+    for gname in sorted(by_group):
+        if group and gname != group:
+            continue
+        names = ", ".join(sorted(by_group[gname]))
+        print(f"  [{gname}] {names}")
+    print()
+    print(f"== Frases por categoria ==  {len(REGISTRY.phrases)} categorias")
+    for kind, phrases in sorted(REGISTRY.phrases.items()):
+        print(f"  {kind}: {len(phrases)} patrones")
+    print(f"== Agentes C2PA ==  {len(REGISTRY.agents)} mapeos")
+    print(f"== Vendors ==  {len(REGISTRY.vendors)} organizaciones")
     return 0
 
 
@@ -189,6 +214,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-meta", action="store_true", help="skip metadata by default"
     )
     config_cmd.set_defaults(handler=_run_config)
+
+    catalog_cmd = sub.add_parser("catalog", help="list registered AI marks and models")
+    catalog_cmd.add_argument(
+        "--group",
+        choices=["llm", "image", "video", "audio", "code"],
+        help="filter models by group",
+    )
+    catalog_cmd.set_defaults(handler=_run_catalog)
 
     check = sub.add_parser("check", help="CI gate")
     check.add_argument("paths", nargs="*", default=["."])

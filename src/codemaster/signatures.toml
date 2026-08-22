@@ -1,0 +1,456 @@
+# CodeMaster — catalogo de huellas de IA
+# Anade o quita entradas sin tocar codigo. Cada modelo es una fila [[models]];
+# las frases por categoria en [phrases]; el mapeo de agentes C2PA en [agents].
+
+[meta]
+version = "1"
+
+[groups]
+llm = "Modelos de lenguaje / chat"
+image = "Generacion de imagenes"
+video = "Generacion de video"
+audio = "Generacion de audio / voz / musica"
+code = "Generacion de codigo"
+
+[phrases]
+authorship = [
+  "\\b(?:generated|created|written|authored|produced|built)\\s+by\\s+(?:claude|chatgpt|gpt-?\\d?|openai|github\\s+copilot|gemini|bard|llama|mistral|codex)",
+  "\\b(?:made|developed)\\s+with\\s+(?:claude|chatgpt|openai|github\\s+copilot|gemini|bard)",
+  "\\bas\\s+an\\s+ai\\s+(?:assistant|language\\s+model|model)\\b",
+  "\\bai\\s+(?:assistant|model)\\s+generated\\b",
+]
+narration = [
+  "\\bnote\\s+that\\b",
+  "\\bplease\\s+note\\b",
+  "\\bkeep\\s+in\\s+mind\\b",
+  "\\bin\\s+conclusion\\b",
+  "\\bhope\\s+this\\s+helps\\b",
+  "\\bfeel\\s+free\\s+to\\b",
+  "\\blet'?s\\s+dive\\b",
+  "\\bhere'?s\\s+how\\b",
+  "\\bas\\s+you\\s+can\\s+see\\b",
+  "\\bremember\\s+to\\b",
+  "\\bdon'?t\\s+forget\\s+to\\b",
+  "\\bof\\s+course\\b",
+  "\\bimportantly\\b",
+  "\\bas\\s+always\\b",
+  "\\bhappy\\s+to\\s+help\\b",
+  "\\bany\\s+questions\\b",
+  "\\bfor\\s+your\\s+convenience\\b",
+  "\\bmoreover\\b",
+  "\\bfurthermore\\b",
+  "\\bnonetheless\\b",
+  "\\bmeanwhile\\b",
+  "\\bin\\s+summary\\b",
+  "\\bin\\s+essence\\b",
+]
+fragment = [
+  "\\brest\\s+of\\s+the\\s+code\\b",
+  "\\bremaining\\s+logic\\b",
+  "\\bremainder\\s+of\\s+the\\b",
+  "\\btruncated\\s+for\\s+brevity\\b",
+  "\\byour\\s+code\\s+here\\b",
+  "\\bsome\\s+code\\s+here\\b",
+  "\\blorem\\s+ipsum\\b",
+  "\\bunchanged\\s+code\\b",
+  "\\bfull\\s+implementation\\s+omitted\\b",
+]
+
+[[models]]
+name = "chatgpt"
+group = "llm"
+patterns = ["chatgpt"]
+[[models]]
+name = "gpt-4o"
+group = "llm"
+patterns = ["gpt-4o"]
+[[models]]
+name = "gpt-4"
+group = "llm"
+patterns = ["gpt-4\\b"]
+[[models]]
+name = "gpt-3.5"
+group = "llm"
+patterns = ["gpt-3\\.5"]
+[[models]]
+name = "claude"
+group = "llm"
+patterns = ["claude"]
+[[models]]
+name = "gemini"
+group = "llm"
+patterns = ["gemini"]
+[[models]]
+name = "bard"
+group = "llm"
+patterns = ["\\bbard\\b"]
+[[models]]
+name = "llama"
+group = "llm"
+patterns = ["llama-?\\d?", "\\bllama\\b"]
+[[models]]
+name = "codellama"
+group = "code"
+patterns = ["codellama"]
+[[models]]
+name = "mistral"
+group = "llm"
+patterns = ["mistral"]
+[[models]]
+name = "mixtral"
+group = "llm"
+patterns = ["mixtral"]
+[[models]]
+name = "deepseek"
+group = "llm"
+patterns = ["deepseek"]
+[[models]]
+name = "qwen"
+group = "llm"
+patterns = ["\\bqwen\\b", "qwen2", "qwen1\\.5"]
+[[models]]
+name = "grok"
+group = "llm"
+patterns = ["\\bgrok\\b"]
+[[models]]
+name = "copilot"
+group = "code"
+patterns = ["github\\s+copilot", "copilot"]
+[[models]]
+name = "codex"
+group = "code"
+patterns = ["codex"]
+[[models]]
+name = "cursor"
+group = "code"
+patterns = ["\\bcursor\\b"]
+[[models]]
+name = "gemma"
+group = "llm"
+patterns = ["\\bgemma\\b"]
+[[models]]
+name = "phi"
+group = "llm"
+patterns = ["\\bphi-?\\d?", "\\bphi\\b"]
+[[models]]
+name = "falcon"
+group = "llm"
+patterns = ["\\bfalcon\\b"]
+[[models]]
+name = "vicuna"
+group = "llm"
+patterns = ["vicuna"]
+[[models]]
+name = "alpaca"
+group = "llm"
+patterns = ["alpaca"]
+[[models]]
+name = "yi"
+group = "llm"
+patterns = ["\\byi-?\\d+\\b"]
+[[models]]
+name = "command-r"
+group = "llm"
+patterns = ["command-r", "\\bcommand\\b"]
+[[models]]
+name = "olmo"
+group = "llm"
+patterns = ["\\bolmo\\b"]
+[[models]]
+name = "kimi"
+group = "llm"
+patterns = ["kimi"]
+[[models]]
+name = "glm"
+group = "llm"
+patterns = ["\\bglm\\b", "chatglm"]
+[[models]]
+name = "ernie"
+group = "llm"
+patterns = ["ernie"]
+[[models]]
+name = "doubao"
+group = "llm"
+patterns = ["doubao"]
+[[models]]
+name = "hunyuan"
+group = "llm"
+patterns = ["hunyuan"]
+[[models]]
+name = "yuanbao"
+group = "llm"
+patterns = ["yuanbao"]
+[[models]]
+name = "dall-e"
+group = "image"
+patterns = ["dall-e", "dalle"]
+[[models]]
+name = "midjourney"
+group = "image"
+patterns = ["midjourney"]
+[[models]]
+name = "stable-diffusion"
+group = "image"
+patterns = ["stable\\s+diffusion", "dreamstudio"]
+[[models]]
+name = "flux"
+group = "image"
+patterns = ["\\bflux\\b", "black\\s+forest"]
+[[models]]
+name = "firefly"
+group = "image"
+patterns = ["firefly", "adobe\\s+firefly"]
+[[models]]
+name = "imagen"
+group = "image"
+patterns = ["\\bimagen\\b", "google\\s+imagen"]
+[[models]]
+name = "ideogram"
+group = "image"
+patterns = ["ideogram"]
+[[models]]
+name = "leonardo-ai"
+group = "image"
+patterns = ["leonardo\\s+ai"]
+[[models]]
+name = "recraft"
+group = "image"
+patterns = ["recraft"]
+[[models]]
+name = "seedream"
+group = "image"
+patterns = ["seedream"]
+[[models]]
+name = "jimeng"
+group = "image"
+patterns = ["jimeng"]
+[[models]]
+name = "microsoft-designer"
+group = "image"
+patterns = ["microsoft\\s+designer", "designer\\s+by\\s+microsoft"]
+[[models]]
+name = "meta-ai"
+group = "image"
+patterns = ["meta\\s+ai", "imagine\\s+with\\s+meta", "meta\\s+imagine"]
+[[models]]
+name = "kling"
+group = "video"
+patterns = ["\\bkling\\b"]
+[[models]]
+name = "sora"
+group = "video"
+patterns = ["\\bsora\\b"]
+[[models]]
+name = "veo"
+group = "video"
+patterns = ["\\bveo\\b"]
+[[models]]
+name = "runway"
+group = "video"
+patterns = ["runway"]
+[[models]]
+name = "pika"
+group = "video"
+patterns = ["\\bpika\\b", "pika\\s+labs"]
+[[models]]
+name = "luma"
+group = "video"
+patterns = ["\\bluma\\b", "luma\\s+ai"]
+[[models]]
+name = "pixverse"
+group = "video"
+patterns = ["pixverse"]
+[[models]]
+name = "hailuo"
+group = "video"
+patterns = ["hailuo"]
+[[models]]
+name = "kaiber"
+group = "video"
+patterns = ["kaiber"]
+[[models]]
+name = "elevenlabs"
+group = "audio"
+patterns = ["elevenlabs", "eleven\\s+labs"]
+[[models]]
+name = "suno"
+group = "audio"
+patterns = ["\\bsuno\\b"]
+[[models]]
+name = "udio"
+group = "audio"
+patterns = ["\\budio\\b"]
+[[models]]
+name = "murf"
+group = "audio"
+patterns = ["\\bmurf\\b"]
+[[models]]
+name = "descript"
+group = "audio"
+patterns = ["descript"]
+[[models]]
+name = "play.ht"
+group = "audio"
+patterns = ["play\\.ht"]
+[[models]]
+name = "whisper"
+group = "audio"
+patterns = ["openai\\s+whisper", "\\bwhisper\\b"]
+[[models]]
+name = "bark"
+group = "audio"
+patterns = ["\\bbark\\b"]
+[[models]]
+name = "coqui"
+group = "audio"
+patterns = ["coqui"]
+[[models]]
+name = "grok-image"
+group = "image"
+patterns = ["grok\\s+image", "grok-?2"]
+[[models]]
+name = "qwen-image"
+group = "image"
+patterns = ["qwen-image", "tongyi\\s+image"]
+[[models]]
+name = "yandex-art"
+group = "image"
+patterns = ["yandex\\s+art"]
+[[models]]
+name = "gigachat"
+group = "llm"
+patterns = ["gigachat"]
+[[models]]
+name = "perplexity"
+group = "llm"
+patterns = ["perplexity"]
+[[models]]
+name = "you"
+group = "llm"
+patterns = ["\\byou\\.com\\b", "youchat"]
+[[models]]
+name = "bolt.new"
+group = "code"
+patterns = ["bolt\\.new"]
+[[models]]
+name = "v0"
+group = "code"
+patterns = ["\\bv0\\.dev\\b", "vercel\\s+v0"]
+[[models]]
+name = "lovable"
+group = "code"
+patterns = ["lovable"]
+[[models]]
+name = "bolt"
+group = "code"
+patterns = ["\\bbolt\\b"]
+[[models]]
+name = "replit"
+group = "code"
+patterns = ["replit"]
+[[models]]
+name = "claude-code"
+group = "code"
+patterns = ["claude\\s+code", "claude-code"]
+[[models]]
+name = "aider"
+group = "code"
+patterns = ["\\baider\\b"]
+[[models]]
+name = "windsurf"
+group = "code"
+patterns = ["windsurf"]
+[[models]]
+name = "trae"
+group = "code"
+patterns = ["\\btrae\\b"]
+[[models]]
+name = "zhipu"
+group = "llm"
+patterns = ["zhipu"]
+[[models]]
+name = "minimax"
+group = "llm"
+patterns = ["minimax"]
+[[models]]
+name = "moonshot"
+group = "llm"
+patterns = ["moonshot"]
+[[models]]
+name = "nvidia"
+group = "llm"
+patterns = ["nvidia\\s+nemotron", "nemotron"]
+[[models]]
+name = "granite"
+group = "llm"
+patterns = ["\\bgranite\\b"]
+
+# [agents] token -> nombre de modelo canonico (subcadena, minusculas)
+[agents]
+"chatgpt" = "chatgpt"
+"gpt-5" = "gpt-5"
+"gpt-4o" = "gpt-4o"
+"gpt-4.1" = "gpt-4.1"
+"gpt-4" = "gpt-4"
+"gpt-3.5" = "gpt-3.5"
+"codex" = "codex"
+"claude" = "claude"
+"gemini" = "gemini"
+"bard" = "bard"
+"deepseek" = "deepseek"
+"groq" = "groq"
+"mistral" = "mistral"
+"mixtral" = "mixtral"
+"qwen" = "qwen"
+"doubao" = "doubao"
+"jimeng" = "jimeng"
+"seedream" = "seedream"
+"kling" = "kling"
+"hunyuan" = "hunyuan"
+"yuanbao" = "yuanbao"
+"kimi" = "kimi"
+"glm" = "glm"
+"ernie" = "ernie"
+"dall-e" = "dall-e"
+"dalle" = "dall-e"
+"midjourney" = "midjourney"
+"stable diffusion" = "stable-diffusion"
+"dreamstudio" = "stable-diffusion"
+"flux" = "flux"
+"firefly" = "firefly"
+"imagen" = "imagen"
+"ideogram" = "ideogram"
+"leonardo ai" = "leonardo-ai"
+"recraft" = "recraft"
+"microsoft designer" = "microsoft-designer"
+"meta ai" = "meta-ai"
+"sora" = "sora"
+"veo" = "veo"
+"runway" = "runway"
+"pika" = "pika"
+"luma" = "luma"
+"pixverse" = "pixverse"
+"hailuo" = "hailuo"
+"elevenlabs" = "elevenlabs"
+"suno" = "suno"
+"udio" = "udio"
+
+# [vendors] tokens que implican un vendor/org (subcadena, minusculas)
+[vendors]
+"openai" = "OpenAI"
+"anthropic" = "Anthropic"
+"google" = "Google"
+"meta" = "Meta"
+"stability" = "Stability AI"
+"adobe" = "Adobe"
+"black forest" = "Black Forest Labs"
+"bfl" = "Black Forest Labs"
+"xai" = "xAI"
+"alibaba" = "Alibaba (Qwen)"
+"bytedance" = "ByteDance"
+"tencent" = "Tencent"
+"baidu" = "Baidu"
+"microsoft" = "Microsoft"
+"cohere" = "Cohere"
+"mistral ai" = "Mistral AI"
+"elevenlabs" = "ElevenLabs"
