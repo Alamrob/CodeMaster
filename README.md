@@ -114,7 +114,17 @@ correlacion de silueta (NCC, CPU) y rellena su area con inpainting cv2.
 Registradas: `gemini` (sparkle de 4 puntas, abajo-derecha), `doubao`, `jimeng`, `qwen`,
 `kling`, `yuanbao` (texto CJK, abajo-derecha), `samsung` (abajo-izquierda),
 `runninghub` (arriba-izquierda), `baidu` y `liblib` (abajo-centro). Sin opencv, se
-degrada a la heuristica generica de esquina (reporte/relleno grueso).
+degradan a la heuristica generica de esquina (reporte/relleno grueso).
+
+Las marcas de texto viven como **plugins** en `src/codemaster/marks.toml` + un
+archivo alpha en `src/codemaster/assets/`. Para registrar una marca nueva:
+
+1. Coloca su silueta alpha (fondo negro, glifo blanco) en `assets/<marca>_alpha.png`
+2. Anade una entrada `[[marks]]` en `marks.toml` con `key`, `asset`, `corner`,
+   fracciones de tamano/margen, umbral NCC y `detect_frontend`
+   (`tophat`/`binary`/`contrast`/`gray`).
+
+El motor `visible.py` no se toca: carga el catalogo via `codemaster.marks.REGISTRY`.
 
 Los activos alpha de deteccion se portan desde `remove-ai-watermarks` (Apache 2.0,
 ver `src/codemaster/assets/README.md`); el motor aqui es un reimplementacion ligera

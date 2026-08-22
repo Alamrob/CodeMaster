@@ -34,6 +34,7 @@ packages = ["src/codemaster"]
 [tool.hatch.build.targets.wheel.force-include]
 "src/codemaster/web_index.html" = "codemaster/web_index.html"
 "src/codemaster/signatures.toml" = "codemaster/signatures.toml"
+"src/codemaster/marks.toml" = "codemaster/marks.toml"
 
 [tool.ruff]
 line-length = 88
