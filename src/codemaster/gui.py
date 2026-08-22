@@ -8,6 +8,8 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from codemaster import portal
+from codemaster.config import load as load_config
+from codemaster.config import save as save_config
 from codemaster.fsutil import Scope
 from codemaster.report import FileSheet, Grade, Mark
 from codemaster.scrubber import Edits, WashResult
@@ -109,6 +111,7 @@ class App:
         self.glyphs = tk.BooleanVar(value=True)
         self.backup = tk.BooleanVar(value=True)
         self.strong_only = tk.BooleanVar(value=False)
+        self._load_prefs()
 
         self._build()
         self._set_busy(False)
@@ -227,6 +230,18 @@ class App:
         self.analyze_btn.configure(state=state)
         self.clean_btn.configure(state=state)
         self.root.configure(cursor="watch" if busy else "")
+
+    def _load_prefs(self) -> None:
+        cfg = load_config()
+        self.strong_only.set(bool(cfg.strong_only))
+        if cfg.last_path:
+            self.path_var.set(cfg.last_path)
+
+    def _save_prefs(self) -> None:
+        cfg = load_config()
+        cfg.strong_only = self.strong_only.get()
+        cfg.last_path = self.path_var.get().strip()
+        save_config(cfg)
 
     # -------------------------------------------------------------- actions
 
@@ -447,6 +462,7 @@ class App:
             return
         self._set_busy(False)
         self._log("Limpieza completada.")
+        self._save_prefs()
 
     def _log(self, line: str) -> None:
         self.log.configure(state=tk.NORMAL)

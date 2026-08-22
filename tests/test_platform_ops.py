@@ -9,12 +9,13 @@ from codemaster.scrubber import WashResult
 
 def test_config_roundtrip(tmp_path: Path) -> None:
     target = tmp_path / "cfg.json"
-    cfg = config.Config(workers=7, backup=False, glyphs=True)
+    cfg = config.Config(workers=7, backup=False, glyphs=True, strong_only=True)
     config.save(cfg, target)
     loaded = config.load(target)
     assert loaded.workers == 7
     assert loaded.backup is False
     assert loaded.glyphs is True
+    assert loaded.strong_only is True
     assert loaded.edits().glyphs is True
 
 

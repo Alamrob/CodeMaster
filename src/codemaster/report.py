@@ -116,6 +116,14 @@ class Ledger:
                 kept.append(FileSheet(sheet.path, marks))
         return Ledger(kept)
 
+    def filter_evidence(self, levels: frozenset[str]) -> Ledger:
+        """Keep only files whose evidence level is in ``levels``."""
+        kept: list[FileSheet] = []
+        for sheet in self.sheets:
+            if sheet.marks and sheet.evidence() in levels:
+                kept.append(sheet)
+        return Ledger(kept)
+
 
 def sheet_render(sheet: FileSheet) -> str:
     rows = [

@@ -17,6 +17,7 @@ class Config:
     docstrings: bool = True
     meta: bool = True
     glyphs: bool = False
+    strong_only: bool = False
     last_path: str = ""
 
     def edits(self) -> Edits:

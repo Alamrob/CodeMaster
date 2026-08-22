@@ -328,6 +328,7 @@ async function clean(){
   const res=await fetch('/api/clean',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const data=await res.json();
   setStatus(`Limpieza completada: ${data.washed} archivo(s) modificados.`);
+  await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({strong_only:$('optStrong').checked})});
   loadHistory();
   runScan();
 }
@@ -336,6 +337,15 @@ async function loadHistory(){
   const res=await fetch('/api/history');const {entries}=await res.json();
   $('hist').innerHTML=entries.length?entries.map(e=>`${e.ts} · ${e.path} [${e.labels.join(', ')}]`).join('<br>')||'': 'Sin registros.';
 }
+
+async function loadPrefs(){
+  try{
+    const res=await fetch('/api/config');
+    const cfg=await res.json();
+    if(cfg.strong_only!==undefined)$('optStrong').checked=!!cfg.strong_only;
+  }catch(_){}
+}
+loadPrefs();
 
 async function downloadReport(){
   const p=$('path').value.trim()||'.';const fmt=$('repFmt').value;
