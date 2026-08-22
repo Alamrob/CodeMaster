@@ -9,7 +9,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from codemaster import portal
 from codemaster.fsutil import Scope
-from codemaster.report import Grade, Mark
+from codemaster.report import FileSheet, Grade, Mark
 from codemaster.scrubber import Edits, WashResult
 
 _CHECKED = "\u2611"
@@ -314,7 +314,11 @@ class App:
         self.detail.configure(state=tk.NORMAL)
         self.detail.delete("1.0", tk.END)
         self.detail.insert(tk.END, f"{row.path}\n", ("head",))
-        self.detail.insert(tk.END, f"tipo: {row.kind}   score: {row.score:.2f}\n\n")
+        self.detail.insert(
+            tk.END,
+            f"tipo: {row.kind}   score: {row.score:.2f}   "
+            f"evidencia: {FileSheet(row.path, row.marks).evidence()}\n\n",
+        )
         if not row.marks:
             self.detail.insert(
                 tk.END, "Sin senales detectadas.\n", (_GRADE_LABEL[Grade.HUSH],)

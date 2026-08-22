@@ -100,7 +100,7 @@ a{color:var(--accent)}
 
   <div class="panel">
     <table>
-      <thead><tr><th></th><th>Archivo</th><th>Tipo</th><th>Score</th><th>Marcas</th><th>Peor</th><th>Señales</th></tr></thead>
+      <thead><tr><th></th><th>Archivo</th><th>Tipo</th><th>Score</th><th>Evid</th><th>Peor</th><th>Señales</th></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
     <div id="empty" class="small" style="padding:10px 0">Ejecuta Analizar para ver resultados.</div>
@@ -147,6 +147,7 @@ const $=id=>document.getElementById(id);
 
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 function chip(rank){return `<span class="chip ${rank}">${rank}</span>`}
+function evchip(ev){return `<span class="chip ${ev==='strong'?'danger':ev==='moderate'?'signal':'hush'}">${ev}</span>`}
 
 function buildCat(){
   const g=new THREE.Group();
@@ -264,7 +265,7 @@ function renderFiles(ev){
     const gs=f.groups?Object.keys(f.groups).join(', '):'';
     tr.innerHTML=`<td class="cb on" data-i="${i}">☑</td>
       <td class="path">${esc(f.path)}</td><td>${esc(f.kind||'')}</td>
-      <td class="score">${f.score.toFixed(2)}</td><td>${f.marks.length}</td>
+      <td class="score">${f.score.toFixed(2)}</td><td>${evchip(f.evidence||'weak')}</td>
       <td>${chip(f.worst)}</td>
       <td>${esc(kinds)}${gs?'<div class="small">'+esc(gs)+'</div>':''}</td>`;
     tr.querySelector('.cb').onclick=()=>toggle(i);

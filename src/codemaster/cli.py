@@ -40,7 +40,11 @@ def _filter_ledger(ledger: Ledger, ns: argparse.Namespace) -> Ledger:
     groups = getattr(ns, "group", None)
     if groups:
         wanted = frozenset(g.strip().lower() for g in groups.split(",") if g.strip())
-        return ledger.filter_groups(wanted)
+        ledger = ledger.filter_groups(wanted)
+    kinds = getattr(ns, "kind", None)
+    if kinds:
+        wanted = frozenset(k.strip().lower() for k in kinds.split(",") if k.strip())
+        ledger = ledger.filter_kinds(wanted)
     return ledger
 
 
@@ -201,6 +205,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--suffix", action="append")
     scan.add_argument("--exclude", action="append")
     scan.add_argument("--group", help="filter by group(s): llm,image,video,audio,code")
+    scan.add_argument("--kind", help="filter by mark kind(s): model,c2pa,exif,...")
     scan.set_defaults(handler=_run_scan)
 
     report = sub.add_parser("report", help="export analysis report")
@@ -214,6 +219,7 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument(
         "--group", help="filter by group(s): llm,image,video,audio,code"
     )
+    report.add_argument("--kind", help="filter by mark kind(s): model,c2pa,exif,...")
     report.set_defaults(handler=_run_report)
 
     config_cmd = sub.add_parser("config", help="read or update persistent config")
@@ -243,6 +249,7 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--suffix", action="append")
     check.add_argument("--exclude", action="append")
     check.add_argument("--group", help="filter by group(s): llm,image,video,audio,code")
+    check.add_argument("--kind", help="filter by mark kind(s): model,c2pa,exif,...")
     check.set_defaults(handler=_run_check)
 
     scrub = sub.add_parser("scrub", help="sanitize sources")

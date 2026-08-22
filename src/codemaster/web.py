@@ -40,6 +40,7 @@ def _sheet_payload(sheet: Any) -> dict[str, Any]:
     return {
         "path": str(sheet.path),
         "score": sheet.score(),
+        "evidence": sheet.evidence(),
         "worst": max((m.rank for m in sheet.marks), default=Grade.HUSH).name.lower(),
         "groups": _group_counts(sheet),
         "marks": [

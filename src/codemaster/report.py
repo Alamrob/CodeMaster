@@ -48,6 +48,26 @@ class FileSheet:
         total = sum(_SCORE_WEIGHTS[mark.rank] for mark in self.marks)
         return min(1.0, total)
 
+    def evidence(self) -> str:
+        """Classify the combined-evidence strength of the marks.
+
+        ``none`` when there are no marks; ``weak`` for isolated mentions;
+        ``moderate`` when several signals or groups appear; ``strong`` when a
+        firm (dangerous) signal is corroborated by additional evidence.
+        """
+        if not self.marks:
+            return "none"
+        danger = any(mark.rank is Grade.DANGER for mark in self.marks)
+        groups = {mark.group for mark in self.marks if mark.group}
+        signals = sum(1 for mark in self.marks if mark.rank is not Grade.HUSH)
+        if danger and signals >= 2:
+            return "strong"
+        if danger:
+            return "moderate"
+        if signals >= 3 or len(groups) >= 2:
+            return "moderate"
+        return "weak"
+
 
 _SCORE_WEIGHTS = {Grade.HUSH: 0.0, Grade.SIGNAL: 0.2, Grade.DANGER: 0.6}
 
@@ -87,6 +107,15 @@ class Ledger:
                 kept.append(FileSheet(sheet.path, marks))
         return Ledger(kept)
 
+    def filter_kinds(self, kinds: frozenset[str]) -> Ledger:
+        """Keep only marks whose kind is in ``kinds``; drop empty sheets."""
+        kept: list[FileSheet] = []
+        for sheet in self.sheets:
+            marks = [m for m in sheet.marks if m.kind in kinds]
+            if marks:
+                kept.append(FileSheet(sheet.path, marks))
+        return Ledger(kept)
+
 
 def sheet_render(sheet: FileSheet) -> str:
     rows = [
@@ -120,6 +149,7 @@ def render_json(ledger: Ledger) -> str:
             {
                 "path": str(sheet.path),
                 "score": sheet.score(),
+                "evidence": sheet.evidence(),
                 "marks": [
                     {
                         "line": mark.line,
@@ -156,7 +186,7 @@ def render_markdown(ledger: Ledger) -> str:
     lines.append("")
     for sheet in files:
         lines.append(f"## {sheet.path}")
-        lines.append(f"- score: {sheet.score():.2f}")
+        lines.append(f"- score: {sheet.score():.2f}  evidencia: {sheet.evidence()}")
         for mark in sheet.marks:
             group = f" [{mark.group}]" if mark.group else ""
             lines.append(

@@ -149,3 +149,14 @@ def test_scan_group_filter(capsys, tmp_path: Path) -> None:
     marks = payload["files"][0]["marks"]
     assert marks and all(m["group"] == "video" for m in marks)
     assert not any(m["group"] == "audio" for m in marks)
+
+
+def test_scan_kind_filter(capsys, tmp_path: Path) -> None:
+    blob = tmp_path / "mix.md"
+    blob.write_text("drafted by claude and cloned with elevenlabs\n", encoding="utf-8")
+    code = main(["scan", "--json", "--kind", "model", str(blob)])
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    marks = payload["files"][0]["marks"]
+    assert marks and all(m["kind"] == "model" for m in marks)
+    assert "evidence" in payload["files"][0]
