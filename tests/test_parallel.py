@@ -111,3 +111,28 @@ def test_report_json_structure(tmp_path: Path) -> None:
     assert payload["worst"] == "danger"
     assert "totals" in payload
     assert len(payload["files"]) == 3
+
+
+def test_group_totals_counts_model_groups(tmp_path: Path) -> None:
+    blob = tmp_path / "mix.md"
+    blob.write_text(
+        "video with sora and voice via elevenlabs, drafted by claude\n",
+        encoding="utf-8",
+    )
+    ledger = portal.tour([tmp_path], Scope())
+    groups = ledger.group_totals()
+    assert groups.get("video") == 1
+    assert groups.get("audio") == 1
+    assert groups.get("llm") == 1
+    sheet = ledger.sheets[0]
+    model_marks = [m for m in sheet.marks if m.kind == "model"]
+    assert all(m.group for m in model_marks)
+
+
+def test_report_markdown_shows_groups(tmp_path: Path) -> None:
+    blob = tmp_path / "mix.md"
+    blob.write_text("video with sora\n", encoding="utf-8")
+    ledger = portal.tour([tmp_path], Scope())
+    md = render_markdown(ledger)
+    assert "Grupos:" in md
+    assert "[video]" in md

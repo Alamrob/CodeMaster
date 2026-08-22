@@ -14,6 +14,7 @@ class Fingerprint:
     kind: str
     rx: re.Pattern[str]
     rank: Grade
+    group: str = ""
 
 
 def _build() -> tuple[Fingerprint, ...]:
@@ -27,7 +28,7 @@ def _build() -> tuple[Fingerprint, ...]:
         rank = _RANKS.get(kind, Grade.SIGNAL)
         add(kind, rank, list(patterns))
     for model in REGISTRY.models:
-        rules.append(Fingerprint("model", model.compile(), Grade.SIGNAL))
+        rules.append(Fingerprint("model", model.compile(), Grade.SIGNAL, model.group))
     return tuple(rules)
 
 
@@ -44,6 +45,7 @@ def match(source: str) -> list[Slip]:
                 fp.kind,
                 found.group(0)[:48],
                 fp.rank,
+                fp.group,
             )
             contained = any(
                 head <= found.start() and found.end() <= tail

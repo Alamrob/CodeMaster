@@ -33,6 +33,7 @@ def _sheet_payload(sheet: Any) -> dict[str, Any]:
         "path": str(sheet.path),
         "score": sheet.score(),
         "worst": max((m.rank for m in sheet.marks), default=Grade.HUSH).name.lower(),
+        "groups": _group_counts(sheet),
         "marks": [
             {
                 "line": m.line,
@@ -40,10 +41,19 @@ def _sheet_payload(sheet: Any) -> dict[str, Any]:
                 "kind": m.kind,
                 "note": m.note,
                 "rank": m.rank.name.lower(),
+                "group": m.group,
             }
             for m in sheet.marks
         ],
     }
+
+
+def _group_counts(sheet: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for mark in sheet.marks:
+        group = mark.group or "other"
+        counts[group] = counts.get(group, 0) + 1
+    return counts
 
 
 def _run_scan(

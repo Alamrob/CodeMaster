@@ -45,7 +45,15 @@ def scan_one(path: Path, scope: Scope) -> FileSheet:
     if blob is None:
         return FileSheet(path, [Mark(path, 1, 1, "access", "unreadable", Grade.HUSH)])
     marks = [
-        Mark(path, slip.line, slip.col, slip.kind, slip.note, slip.rank)
+        Mark(
+            path,
+            slip.line,
+            slip.col,
+            slip.kind,
+            slip.note,
+            slip.rank,
+            slip.group,
+        )
         for slip in audit(blob)
     ]
     marks.sort(key=lambda mark: (mark.line, mark.col))

@@ -20,6 +20,7 @@ class Slip:
     kind: str
     note: str
     rank: Grade
+    group: str = ""
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,7 @@ class Mark:
     kind: str
     note: str
     rank: Grade
+    group: str = ""
 
 
 @dataclass
@@ -67,6 +69,15 @@ class Ledger:
                 counts[mark.kind] = counts.get(mark.kind, 0) + 1
         return counts
 
+    def group_totals(self) -> dict[str, int]:
+        """Count marks by catalog group (llm/image/video/audio/code/...)."""
+        counts: dict[str, int] = {}
+        for sheet in self.sheets:
+            for mark in sheet.marks:
+                group = mark.group or "other"
+                counts[group] = counts.get(group, 0) + 1
+        return counts
+
 
 def sheet_render(sheet: FileSheet) -> str:
     rows = [
@@ -95,6 +106,7 @@ def render_json(ledger: Ledger) -> str:
     payload: dict[str, Any] = {
         "worst": ledger.worst().name.lower(),
         "totals": ledger.totals(),
+        "groups": ledger.group_totals(),
         "files": [
             {
                 "path": str(sheet.path),
@@ -106,6 +118,7 @@ def render_json(ledger: Ledger) -> str:
                         "kind": mark.kind,
                         "note": mark.note,
                         "rank": mark.rank.name.lower(),
+                        "group": mark.group,
                     }
                     for mark in sheet.marks
                 ],
@@ -124,6 +137,11 @@ def render_markdown(ledger: Ledger) -> str:
         "- Totales: "
         + (", ".join(f"{k}={v}" for k, v in sorted(totals.items())) or "ninguna")
     )
+    groups = ledger.group_totals()
+    if groups:
+        lines.append(
+            "- Grupos: " + ", ".join(f"{k}={v}" for k, v in sorted(groups.items()))
+        )
     files = [sheet for sheet in ledger.sheets if sheet.marks]
     lines.append(f"- Archivos con senales: {len(files)} / {len(ledger.sheets)}")
     lines.append("")
@@ -131,8 +149,9 @@ def render_markdown(ledger: Ledger) -> str:
         lines.append(f"## {sheet.path}")
         lines.append(f"- score: {sheet.score():.2f}")
         for mark in sheet.marks:
+            group = f" [{mark.group}]" if mark.group else ""
             lines.append(
-                f"- [{mark.rank.name.lower()}] `{mark.kind}` "
+                f"- [{mark.rank.name.lower()}]{group} `{mark.kind}` "
                 f"({mark.line}:{mark.col}) {mark.note}"
             )
         lines.append("")
@@ -148,11 +167,7 @@ def render_html(ledger: Ledger) -> str:
     for sheet in ledger.sheets:
         if not sheet.marks:
             continue
-        marks = "".join(
-            f'<li class="{mark.rank.name.lower()}"><b>{mark.kind}</b> '
-            f"({mark.line}:{mark.col}) {_esc(mark.note)}</li>"
-            for mark in sheet.marks
-        )
+        marks = "".join(_html_mark(mark) for mark in sheet.marks)
         rows.append(
             f'<tr><td class="path">{_esc(str(sheet.path))}</td>'
             f"<td>{sheet.score():.2f}</td>"
@@ -185,6 +200,14 @@ def render_html(ledger: Ledger) -> str:
 
 def _esc(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _html_mark(mark: Mark) -> str:
+    badge = f'<span class="badge">{_esc(mark.group)}</span>' if mark.group else ""
+    return (
+        f'<li class="{mark.rank.name.lower()}"><b>{_esc(mark.kind)}</b> '
+        f"{badge}({mark.line}:{mark.col}) {_esc(mark.note)}</li>"
+    )
 
 
 def _verdict_name(grade: Grade) -> str:

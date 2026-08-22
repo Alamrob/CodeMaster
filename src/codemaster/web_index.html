@@ -246,11 +246,13 @@ function renderFiles(ev){
   const tb=$('tbody'); tb.innerHTML='';
   ev.files.forEach((f,i)=>{
     const tr=document.createElement('tr');
+    const kinds=f.marks.map(m=>m.kind).filter((k,x,a)=>a.indexOf(k)===x).join(', ');
+    const gs=f.groups?Object.keys(f.groups).join(', '):'';
     tr.innerHTML=`<td class="cb on" data-i="${i}">☑</td>
       <td class="path">${esc(f.path)}</td><td>${esc(f.kind||'')}</td>
       <td class="score">${f.score.toFixed(2)}</td><td>${f.marks.length}</td>
       <td>${chip(f.worst)}</td>
-      <td>${esc(f.marks.map(m=>m.kind).filter((k,x,a)=>a.indexOf(k)===x).join(', '))}</td>`;
+      <td>${esc(kinds)}${gs?'<div class="small">'+esc(gs)+'</div>':''}</td>`;
     tr.querySelector('.cb').onclick=()=>toggle(i);
     tr.onclick=()=>showDetail(f);
     tb.appendChild(tr);
@@ -284,8 +286,13 @@ function showDetail(f){
     :rank==='signal'?'Posibles señales de IA: conviene revisar.'
     :'Sin señales de IA detectadas.';
   let out=`📄 ${f.path}\nscore: ${f.score.toFixed(2)}  peor: ${rank}  → ${verdict}\n\n`;
+  if(f.groups){
+    const g=Object.entries(f.groups).map(([k,v])=>`${k}:${v}`).join('  ');
+    out+=`grupos: ${g}\n\n`;
+  }
   f.marks.forEach(m=>{
-    out+=`[${m.rank.toUpperCase()}] ${m.line}:${m.col}  ${m.kind}: ${m.note}\n`;
+    const g=m.group?` [${m.group}]`:'';
+    out+=`[${m.rank.toUpperCase()}]${g} ${m.line}:${m.col}  ${m.kind}: ${m.note}\n`;
     const info=KIND_INFO[m.kind]||'Señal identificada por el analizador.';
     out+=`    ↳ ${info}\n`;
   });

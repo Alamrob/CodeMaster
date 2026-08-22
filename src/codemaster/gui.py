@@ -321,9 +321,10 @@ class App:
             )
         for mark in row.marks:
             tag = _GRADE_LABEL[mark.rank]
+            group = f" [{mark.group}]" if mark.group else ""
             self.detail.insert(
                 tk.END,
-                f"[{_GRADE_LABEL[mark.rank].upper()}] {mark.line}:{mark.col}  "
+                f"[{_GRADE_LABEL[mark.rank].upper()}]{group} {mark.line}:{mark.col}  "
                 f"{mark.kind}: {mark.note}\n",
                 (tag,),
             )
@@ -333,6 +334,13 @@ class App:
         counts: dict[str, int] = {}
         for mark in row.marks:
             counts[mark.kind] = counts.get(mark.kind, 0) + 1
+        groups: dict[str, int] = {}
+        for mark in row.marks:
+            group = mark.group or "other"
+            groups[group] = groups.get(group, 0) + 1
+        if groups:
+            summary = "  ".join(f"{g}={c}" for g, c in sorted(groups.items()))
+            self.detail.insert(tk.END, f"\nGrupos: {summary}\n")
         for kind, count in sorted(counts.items()):
             info = _KIND_INFO.get(kind, "Senal identificada por el analizador.")
             self.detail.insert(tk.END, f"\n{kind} ({count}): {info}\n")
