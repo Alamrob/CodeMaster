@@ -36,6 +36,22 @@ DEFAULT_SUFFIXES = frozenset(
         ".mdx",
         ".log",
         ".epub",
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".m4a",
+        ".aac",
+        ".ogg",
+        ".opus",
+        ".mp4",
+        ".mov",
+        ".m4v",
+        ".mkv",
+        ".webm",
+        ".avi",
+        ".gguf",
+        ".onnx",
+        ".safetensors",
     }
 )
 

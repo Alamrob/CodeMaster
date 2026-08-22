@@ -24,6 +24,17 @@ class _PixelHandler:
             for mark in registry.MARKS:
                 if mark.locate(image, width, height):
                     slips.append(Slip(1, 1, "mark", mark.name, Grade.SIGNAL))
+            stego = _lsb_stego_score(image)
+            if stego is not None and stego > 0.08:
+                slips.append(
+                    Slip(
+                        1,
+                        1,
+                        "stego",
+                        f"LSB data embedding {stego:.2f}",
+                        Grade.SIGNAL,
+                    )
+                )
         if _deps.opencv_ok():
             cv_img = _decode_cv(blob)
             if cv_img is not None:
@@ -77,6 +88,42 @@ def _open(blob: Blob) -> Any:
         return image
     except Exception:
         return None
+
+
+def _lsb_stego_score(image: Any) -> float | None:
+    """Heuristic score for LSB data embedding in the least-significant bit.
+
+    Measures per-channel pairwise correlation of LSB bits across a sampling
+    grid of pixel pairs. Natural images have locally correlated LSBs; data
+    steganography randomizes them, pushing the score toward ``1.0``. Returns
+    ``None`` when the image cannot be sampled (too small or unsupported mode).
+    """
+    np = _deps.load("numpy")
+    if not np:
+        return None
+    try:
+        gray = image.convert("L")
+        arr = np.asarray(gray, dtype=np.uint8)
+    except Exception:
+        return None
+    height, width = arr.shape
+    if height < 64 or width < 64:
+        return None
+    step = max(2, min(width, height) // 64)
+    ys = range(16, height - 16, step)
+    xs = range(16, width - 16, step)
+    samples = 0
+    equal = 0
+    for y in ys:
+        for x in xs:
+            lsb_a = int(arr[y, x]) & 1
+            lsb_b = int(arr[y, x + 1]) & 1
+            samples += 1
+            if lsb_a == lsb_b:
+                equal += 1
+    if samples == 0:
+        return None
+    return 1.0 - equal / samples
 
 
 def _decode_cv(blob: Blob) -> Any:

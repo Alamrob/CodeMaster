@@ -102,7 +102,10 @@ via `[agents]`/`[vendors]`.
 | GIF | cabecera `GIF87a`/`GIF89a` | extensiones Comment (0xFE) y XMP (0xFF) |
 | TIFF | `II*\x00`/`MM\x00*` | tags software/artist/xmp/ExifIFD en IFD |
 | HEIC/AVIF | ISO BMFF `ftyp` heic/avif | cajas `meta`/XMP/C2PA (zeroing ISO BMFF) |
-| Imagen (pixels) | marcas visibles reales de IA | localize -> fill (inpaint cv2) |
+| Audio | `ID3`, RIFF/WAVE, FLAC, Ogg | markers de tool, firmas de texto, modelos |
+| Video | ISO BMFF `ftyp` mp4/mov, MKV/WebM | cajas XMP/C2PA (zeroing BMFF), markers, firmas |
+| Modelo ML | `GGUF`, `onnx`, `safetensors` | markers de modelo (qwen, llama, mistral...) |
+| Imagen (pixels) | marcas visibles reales de IA, esteganografia LSB | localize -> fill (inpaint cv2) |
 | Binarios | bytes nulos | solo reporte forense (no reescribibles) |
 
 ## Marcas visibles reales

@@ -6,6 +6,7 @@ from codemaster.handlers import (
     html,
     image_meta,
     image_pixels,
+    media,
     office,
     pdf,
     text,
@@ -32,4 +33,6 @@ def chain(blob: Blob) -> list[Handler]:
         return [forensics.HANDLER]
     if kind in ("text", "code"):
         return [text.HANDLER]
+    if kind in ("audio", "video", "model"):
+        return [media.HANDLER]
     return []
