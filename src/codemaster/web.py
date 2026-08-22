@@ -28,6 +28,14 @@ def _scope_from(params: dict[str, list[str]]) -> Scope:
     return scope
 
 
+def _groups_from(params: dict[str, list[str]]) -> frozenset[str] | None:
+    raw = params.get("group", [""])[0]
+    if not raw:
+        return None
+    wanted = frozenset(g.strip().lower() for g in raw.split(",") if g.strip())
+    return wanted or None
+
+
 def _sheet_payload(sheet: Any) -> dict[str, Any]:
     return {
         "path": str(sheet.path),
@@ -61,6 +69,7 @@ def _run_scan(
     scope: Scope,
     config: Config,
     emit: Callable[[dict[str, Any]], None],
+    groups: frozenset[str] | None = None,
 ) -> None:
     def progress(done: int, total: int) -> None:
         emit({"type": "progress", "done": done, "total": total})
@@ -68,6 +77,8 @@ def _run_scan(
     ledger = portal.tour_parallel(
         roots, scope, workers=config.workers, progress=progress
     )
+    if groups:
+        ledger = ledger.filter_groups(groups)
     emit(
         {
             "type": "done",
@@ -180,23 +191,36 @@ class Handler(BaseHTTPRequestHandler):
             return
         scope = _scope_from(query)
         config = load_config()
+        groups = _groups_from(query)
         stream = query.get("stream", ["1"])[0] != "0"
         if not stream:
-            self._scan_sync(root, scope, config)
+            self._scan_sync(root, scope, config, groups)
             return
-        self._scan_stream(root, scope, config)
+        self._scan_stream(root, scope, config, groups)
 
-    def _scan_sync(self, root: Path, scope: Scope, config: Config) -> None:
+    def _scan_sync(
+        self,
+        root: Path,
+        scope: Scope,
+        config: Config,
+        groups: frozenset[str] | None,
+    ) -> None:
         events: list[dict[str, Any]] = []
 
         def emit(payload: dict[str, Any]) -> None:
             events.append(payload)
 
-        _run_scan([root], scope, config, emit)
+        _run_scan([root], scope, config, emit, groups)
         final = next(e for e in events if e["type"] == "done")
         self._send_json(final)
 
-    def _scan_stream(self, root: Path, scope: Scope, config: Config) -> None:
+    def _scan_stream(
+        self,
+        root: Path,
+        scope: Scope,
+        config: Config,
+        groups: frozenset[str] | None,
+    ) -> None:
         events: queue.Queue[dict[str, Any]] = queue.Queue()
 
         def emit(payload: dict[str, Any]) -> None:
@@ -214,7 +238,7 @@ class Handler(BaseHTTPRequestHandler):
 
         def worker() -> None:
             try:
-                _run_scan([root], scope, config, emit)
+                _run_scan([root], scope, config, emit, groups)
             except Exception as exc:  # pragma: no cover - defensive
                 emit({"type": "error", "error": str(exc)})
                 emit({"type": "done", "totals": {}, "worst": "hush", "files": []})

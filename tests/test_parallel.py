@@ -136,3 +136,17 @@ def test_report_markdown_shows_groups(tmp_path: Path) -> None:
     md = render_markdown(ledger)
     assert "Grupos:" in md
     assert "[video]" in md
+
+
+def test_filter_groups_keeps_only_selected(tmp_path: Path) -> None:
+    blob = tmp_path / "mix.md"
+    blob.write_text(
+        "video with sora and voice via elevenlabs, drafted by claude\n",
+        encoding="utf-8",
+    )
+    ledger = portal.tour([tmp_path], Scope())
+    video_only = ledger.filter_groups(frozenset({"video"}))
+    assert video_only.sheets[0].marks
+    assert all(m.group == "video" for m in video_only.sheets[0].marks)
+    empty = ledger.filter_groups(frozenset({"code"}))
+    assert empty.sheets == []

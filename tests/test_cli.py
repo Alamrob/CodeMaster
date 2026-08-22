@@ -138,3 +138,14 @@ def test_catalog_group_filter(capsys) -> None:
     assert "[audio]" in output
     assert "elevenlabs" in output
     assert "[video]" not in output
+
+
+def test_scan_group_filter(capsys, tmp_path: Path) -> None:
+    blob = tmp_path / "mix.md"
+    blob.write_text("video with sora and voice via elevenlabs\n", encoding="utf-8")
+    code = main(["scan", "--json", "--group", "video", str(blob)])
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    marks = payload["files"][0]["marks"]
+    assert marks and all(m["group"] == "video" for m in marks)
+    assert not any(m["group"] == "audio" for m in marks)

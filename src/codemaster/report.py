@@ -78,6 +78,15 @@ class Ledger:
                 counts[group] = counts.get(group, 0) + 1
         return counts
 
+    def filter_groups(self, groups: frozenset[str]) -> Ledger:
+        """Keep only marks whose group is in ``groups``; drop empty sheets."""
+        kept: list[FileSheet] = []
+        for sheet in self.sheets:
+            marks = [m for m in sheet.marks if (m.group or "other") in groups]
+            if marks:
+                kept.append(FileSheet(sheet.path, marks))
+        return Ledger(kept)
+
 
 def sheet_render(sheet: FileSheet) -> str:
     rows = [

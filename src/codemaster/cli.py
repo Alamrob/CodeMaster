@@ -14,6 +14,7 @@ from codemaster.config import save as save_config
 from codemaster.fsutil import Scope, list_files_all
 from codemaster.report import (
     Grade,
+    Ledger,
     render_html,
     render_human,
     render_json,
@@ -35,14 +36,22 @@ def _paths(ns: argparse.Namespace) -> list[Path]:
     return [Path(item) for item in ns.paths]
 
 
+def _filter_ledger(ledger: Ledger, ns: argparse.Namespace) -> Ledger:
+    groups = getattr(ns, "group", None)
+    if groups:
+        wanted = frozenset(g.strip().lower() for g in groups.split(",") if g.strip())
+        return ledger.filter_groups(wanted)
+    return ledger
+
+
 def _run_scan(ns: argparse.Namespace) -> int:
-    ledger = portal.tour(_paths(ns), _scope(ns))
+    ledger = _filter_ledger(portal.tour(_paths(ns), _scope(ns)), ns)
     print(render_json(ledger) if ns.json else render_human(ledger))
     return 0
 
 
 def _run_report(ns: argparse.Namespace) -> int:
-    ledger = portal.tour(_paths(ns), _scope(ns))
+    ledger = _filter_ledger(portal.tour(_paths(ns), _scope(ns)), ns)
     if ns.format == "json":
         body = render_json(ledger)
     elif ns.format == "md":
@@ -110,7 +119,7 @@ def _run_catalog(ns: argparse.Namespace) -> int:
 
 
 def _run_check(ns: argparse.Namespace) -> int:
-    ledger = portal.tour(_paths(ns), _scope(ns))
+    ledger = _filter_ledger(portal.tour(_paths(ns), _scope(ns)), ns)
     threshold = Grade.SIGNAL if ns.strict else Grade.DANGER
     print(render_json(ledger) if ns.json else render_human(ledger))
     return 1 if ledger.worst() >= threshold else 0
@@ -191,6 +200,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--json", action="store_true")
     scan.add_argument("--suffix", action="append")
     scan.add_argument("--exclude", action="append")
+    scan.add_argument("--group", help="filter by group(s): llm,image,video,audio,code")
     scan.set_defaults(handler=_run_scan)
 
     report = sub.add_parser("report", help="export analysis report")
@@ -201,6 +211,9 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("-o", "--output", type=Path)
     report.add_argument("--suffix", action="append")
     report.add_argument("--exclude", action="append")
+    report.add_argument(
+        "--group", help="filter by group(s): llm,image,video,audio,code"
+    )
     report.set_defaults(handler=_run_report)
 
     config_cmd = sub.add_parser("config", help="read or update persistent config")
@@ -229,6 +242,7 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--strict", action="store_true")
     check.add_argument("--suffix", action="append")
     check.add_argument("--exclude", action="append")
+    check.add_argument("--group", help="filter by group(s): llm,image,video,audio,code")
     check.set_defaults(handler=_run_check)
 
     scrub = sub.add_parser("scrub", help="sanitize sources")
