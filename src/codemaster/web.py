@@ -81,6 +81,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -129,6 +130,7 @@ class Handler(BaseHTTPRequestHandler):
             body = b"<html><body><h1>CodeMaster</h1></body></html>"
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -201,7 +203,11 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         def worker() -> None:
-            _run_scan([root], scope, config, emit)
+            try:
+                _run_scan([root], scope, config, emit)
+            except Exception as exc:  # pragma: no cover - defensive
+                emit({"type": "error", "error": str(exc)})
+                emit({"type": "done", "totals": {}, "worst": "hush", "files": []})
 
         threading.Thread(target=worker, daemon=True).start()
         try:

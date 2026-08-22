@@ -38,6 +38,7 @@ packages = ["src/codemaster"]
 line-length = 88
 target-version = "py311"
 src = ["src", "tests"]
+exclude = ["demos"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "C4"]

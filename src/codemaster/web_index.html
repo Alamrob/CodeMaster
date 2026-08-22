@@ -211,23 +211,32 @@ async function runScan(){
   setBusy(true);
   $('tbody').innerHTML=''; $('empty').classList.add('hide');
   $('bar').style.display='block'; $('fill').style.width='0';
-  const res=await fetch('/api/scan?path='+encodeURIComponent(p));
-  if(!res.ok){const e=await res.json();setStatus('Error: '+(e.error||res.status));setBusy(false);return}
-  const reader=res.body.getReader();
-  const dec=new TextDecoder();let buf='';
-  while(true){
-    const {done,value}=await reader.read();
-    if(done)break;
-    buf+=dec.decode(value,{stream:true});
-    let idx;
-    while((idx=buf.indexOf('\n\n'))>=0){
-      const line=buf.slice(0,idx).split('\n').find(l=>l.startsWith('data: '));
-      buf=buf.slice(idx+2);
-      if(!line)continue;
-      const ev=JSON.parse(line.slice(6));
-      if(ev.type==='progress'){setStatus(`Escaneando ${ev.done}/${ev.total}...`);$('fill').style.width=(100*ev.done/ev.total)+'%'}
-      if(ev.type==='done'){renderFiles(ev);setStatus(`Listo: ${ev.files.length} archivos con señales (peor: ${ev.worst})`)}
+  setStatus('Iniciando analisis...');
+  try{
+    const res=await fetch('/api/scan?path='+encodeURIComponent(p));
+    if(!res.ok){let msg='HTTP '+res.status;try{const e=await res.json();msg=e.error||msg}catch(_){}setStatus('Error: '+msg);setBusy(false);return}
+    const reader=res.body.getReader();
+    const dec=new TextDecoder();let buf='';let sawDone=false;
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let idx;
+      while((idx=buf.indexOf('\n\n'))>=0){
+        const line=buf.slice(0,idx).split('\n').find(l=>l.startsWith('data: '));
+        buf=buf.slice(idx+2);
+        if(!line)continue;
+        let ev;
+        try{ev=JSON.parse(line.slice(6))}catch(_){continue}
+        if(ev.type==='progress'){setStatus(`Escaneando ${ev.done}/${ev.total}...`);$('fill').style.width=(100*ev.done/ev.total)+'%'}
+        else if(ev.type==='error'){setStatus('Error: '+ev.error);$('empty').textContent='Hubo un error: '+ev.error;$('empty').classList.remove('hide')}
+        else if(ev.type==='done'){sawDone=true;renderFiles(ev);setStatus(`Listo: ${ev.files.length} archivos con señales (peor: ${ev.worst})`)}
+      }
     }
+    if(!sawDone){setStatus('Analisis incompleto (stream cerrado antes de terminar).');setBusy(false);return}
+  }catch(e){
+    setStatus('Error de conexion: '+e.message);
+    setBusy(false);return;
   }
   setBusy(false);
 }

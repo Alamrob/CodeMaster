@@ -41,6 +41,7 @@ def test_index_served(tmp_path: Path) -> None:
             assert resp.status == 200
             assert "CodeMaster" in body
             assert "three" in body
+            assert resp.headers.get("Cache-Control") == "no-store"
     finally:
         _stop(server, thread)
 
@@ -132,9 +133,7 @@ def test_api_list_dirs(tmp_path: Path) -> None:
     (tmp_path / "plain.txt").write_text("x", encoding="utf-8")
     server, port, thread = _server()
     try:
-        with urlopen(
-            _url(port, f"/api/list?path={tmp_path}"), timeout=10
-        ) as resp:
+        with urlopen(_url(port, f"/api/list?path={tmp_path}"), timeout=10) as resp:
             payload = json.loads(resp.read().decode())
         assert payload["path"] == str(tmp_path)
         assert [d["name"] for d in payload["dirs"]] == ["sub"]
