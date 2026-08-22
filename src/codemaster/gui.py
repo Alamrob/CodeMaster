@@ -108,6 +108,7 @@ class App:
         self.meta = tk.BooleanVar(value=True)
         self.glyphs = tk.BooleanVar(value=True)
         self.backup = tk.BooleanVar(value=True)
+        self.strong_only = tk.BooleanVar(value=False)
 
         self._build()
         self._set_busy(False)
@@ -152,6 +153,9 @@ class App:
         ttk.Checkbutton(opts, text="respaldo .bak", variable=self.backup).pack(
             side=tk.LEFT, padx=6
         )
+        ttk.Checkbutton(
+            opts, text="solo evidencia fuerte", variable=self.strong_only
+        ).pack(side=tk.LEFT, padx=6)
 
         main_pane = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         main_pane.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
@@ -264,7 +268,14 @@ class App:
 
     def _render(self, rows: list[Row]) -> None:
         self.rows = rows
-        self.selected = set(range(len(rows)))
+        if self.strong_only.get():
+            self.selected = {
+                i
+                for i, row in enumerate(rows)
+                if FileSheet(row.path, row.marks).evidence() in ("strong", "moderate")
+            }
+        else:
+            self.selected = set(range(len(rows)))
         self.tree.delete(*self.tree.get_children())
         for index, row in enumerate(rows):
             worst = _rank_for(row.marks).name.lower()

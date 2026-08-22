@@ -87,6 +87,7 @@ a{color:var(--accent)}
     </div>
     <div class="row" style="margin-top:10px">
       <label class="small"><input type="checkbox" id="optBackup" checked> respaldo .bak</label>
+      <label class="small"><input type="checkbox" id="optStrong"> solo evidencia fuerte</label>
       <label class="small"><input type="checkbox" id="optComments" checked> comentarios</label>
       <label class="small"><input type="checkbox" id="optDocs" checked> docstrings</label>
       <label class="small"><input type="checkbox" id="optMeta" checked> metadatos</label>
@@ -257,13 +258,16 @@ async function runScan(){
 }
 
 function renderFiles(ev){
-  state.files=ev.files; state.selected=new Set(ev.files.map((_,i)=>i));
+  state.files=ev.files;
+  const strongOnly=$('optStrong').checked;
+  state.selected=new Set(ev.files.map((_,i)=>i).filter(i=>!strongOnly||['strong','moderate'].includes(ev.files[i].evidence)));
   const tb=$('tbody'); tb.innerHTML='';
   ev.files.forEach((f,i)=>{
     const tr=document.createElement('tr');
+    const on=state.selected.has(i);
     const kinds=f.marks.map(m=>m.kind).filter((k,x,a)=>a.indexOf(k)===x).join(', ');
     const gs=f.groups?Object.keys(f.groups).join(', '):'';
-    tr.innerHTML=`<td class="cb on" data-i="${i}">☑</td>
+    tr.innerHTML=`<td class="cb ${on?'on':''}" data-i="${i}">${on?'☑':'☐'}</td>
       <td class="path">${esc(f.path)}</td><td>${esc(f.kind||'')}</td>
       <td class="score">${f.score.toFixed(2)}</td><td>${evchip(f.evidence||'weak')}</td>
       <td>${chip(f.worst)}</td>
